@@ -1,8 +1,9 @@
 plugins {
     id 'java-library'
+    id 'idea'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '1.0.21'
-    id "com.diffplug.spotless" version "7.0.2"
+    id 'net.neoforged.moddev' version '2.0.143'
+    id 'com.diffplug.spotless' version '8.9.0'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -16,8 +17,6 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
 }
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 tasks.withType(Jar).configureEach {
     exclude ".cache"
@@ -81,15 +80,15 @@ configurations {
 }
 
 repositories {
-    maven { url "https://maven.createmod.net" } // Ponder, Flywheel
-    maven { url "https://mvn.devos.one/snapshots" } // Registrate
-    maven { url "https://maven.blamejared.com"       } // JEI
-    maven { url "https://maven.theillusivec4.top/" } // Curios API
-    maven { url 'https://maven.fallenbreath.me/releases' } // Conditional Mixin
-    maven { url "https://www.cursemaven.com" }
-    maven { url "https://api.modrinth.com/maven" }
-    maven { url "https://raw.githubusercontent.com/Fuzss/modresources/main/maven" } // NeoForge config api port, needed by ponder
-    maven { url "https://maven.ryanhcode.dev/releases" } // RyanHCode Maven - Sable
+    maven { url = uri('https://maven.createmod.net') } // Ponder, Flywheel
+    maven { url = uri('https://mvn.devos.one/snapshots') } // Registrate
+    maven { url = uri('https://maven.blamejared.com') } // JEI
+    maven { url = uri('https://maven.theillusivec4.top/') } // Curios API
+    maven { url = uri('https://maven.fallenbreath.me/releases') } // Conditional Mixin
+    maven { url = uri('https://www.cursemaven.com') }
+    maven { url = uri('https://api.modrinth.com/maven') }
+    maven { url = uri('https://raw.githubusercontent.com/Fuzss/modresources/main/maven') } // NeoForge config api port, needed by ponder
+    maven { url = uri('https://maven.ryanhcode.dev/releases') } // RyanHCode Maven - Sable
 }
 
 dependencies {
@@ -105,7 +104,7 @@ dependencies {
     runtimeOnly("dev.engine-room.vanillin:vanillin-neoforge-${flywheel_minecraft_version}:${vanillin_version}")
     api("com.tterrag.registrate:Registrate:${registrate_version}")
     api("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
-    api("com.simibubi.create:create-${minecraft_version}:${create_version}") { transitive false }
+    api("com.simibubi.create:create-${minecraft_version}:${create_version}") { transitive = false }
 
     compileOnly("mezz.jei:jei-${jei_minecraft_version}-common-api:${jei_version}")
     compileOnly("mezz.jei:jei-${jei_minecraft_version}-neoforge-api:${jei_version}")
@@ -114,13 +113,10 @@ dependencies {
     compileOnly("top.theillusivec4.curios:curios-neoforge:${curios_version}+${curios_minecraft_version}:api")
     localRuntime("top.theillusivec4.curios:curios-neoforge:${curios_version}+${curios_minecraft_version}")
 
-    compileOnly("top.theillusivec4.curios:curios-neoforge:${curios_version}+${curios_minecraft_version}:api")
-    localRuntime("top.theillusivec4.curios:curios-neoforge:${curios_version}+${curios_minecraft_version}")
-
     localImplementation("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}")
-    localImplementation("dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}")  { transitive false }
-    localImplementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}")  { transitive false }
-    localImplementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}")  { transitive false }
+    localImplementation("dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
+    localImplementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
+    localImplementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
 
     localImplementation("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
     localImplementation("maven.modrinth:brandons-core:${brandons_core_version}")
@@ -128,7 +124,7 @@ dependencies {
 
     localImplementation("maven.modrinth:mekanism:${mekanism_version}")
 
-    localRuntime("maven.modrinth:createaddition:neoforge-1.21.1-1.5.10") // Creative Generator for fast test
+    localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast test
 
 }
 
