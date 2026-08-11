@@ -20,12 +20,7 @@ package dev.marblegate.letemburn.waaoh;
 
 import static com.brandon3055.draconicevolution.init.DEContent.REACTOR_CORE;
 
-import com.brandon3055.brandonscore.utils.MathUtils;
-import com.brandon3055.draconicevolution.DEConfig;
-import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
-import dev.ryanhcode.sable.companion.SableCompanion;
-import dev.ryanhcode.sable.companion.math.JOMLConversion;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
 import java.util.Optional;
 import mekanism.common.attachments.BlockData;
@@ -35,7 +30,7 @@ import mekanism.common.tile.TileEntityCardboardBox;
 import mekanism.common.util.WorldUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Blocks;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -44,8 +39,9 @@ public class ReleaseBigBoom implements BlockSubLevelCollisionCallback {
     public static final ReleaseBigBoom INSTANCE = new ReleaseBigBoom();
 
     @Override
-    public CollisionResult sable$onCollision(BlockPos blockPos, Vector3d pos, double impactVelocity) {
-        if (impactVelocity * impactVelocity < 16) {
+    public CollisionResult sable$onCollision(
+            BlockPos blockPos, @Nullable BlockPos otherBlockPos, Vector3d pos, double impactVelocity) {
+        if (!DraconicReactorImpact.isHardEnough(impactVelocity)) {
             return CollisionResult.NONE;
         }
 
@@ -64,18 +60,9 @@ public class ReleaseBigBoom implements BlockSubLevelCollisionCallback {
             if (block.is(REACTOR_CORE)) {
                 var nbt = inside.get().blockEntityTag().getCompound("bc_managed_data");
                 if (nbt.getInt("explosion_countdown") > -1) {
-                    var helper = SableCompanion.INSTANCE;
-                    Vector3d realVec = helper.projectOutOfSubLevel(level, new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
-                    BlockPos realPos = BlockPos.containing(realVec.x, realVec.y, realVec.z);
                     var convertedFuel = nbt.getDouble("converted_fuel");
                     var reactableFuel = nbt.getDouble("reactable_fuel");
-                    double radius = MathUtils.map(convertedFuel + reactableFuel, 144.0F, 10368.0F, 50.0F, 350.0F) * DEConfig.reactorExplosionScale;
-                    var explosion = new ProcessExplosion(realPos, (int) radius, level, -1);
-                    level.setBlock(blockPos, Blocks.AIR.defaultBlockState(), 11);
-                    if (explosion instanceof RememberDatPos r)
-                        r.remember(realPos);
-                    explosion.detonate();
-                    return new CollisionResult(JOMLConversion.ZERO, true);
+                    return DraconicReactorImpact.detonate(blockPos, convertedFuel, reactableFuel);
                 }
             }
         }

@@ -35,6 +35,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Restriction(require = {
         @Condition("sable"),
@@ -45,26 +47,32 @@ public abstract class TileReactorCoreMixin extends TileBCore {
         super(type, pos, state);
     }
 
+    @Inject(method = "checkBlockIntrusions", at = @At("HEAD"), cancellable = true)
+    private void checkBlockIntrusions$preserveSubLevelPayload(CallbackInfo ci) {
+        if (Sable.HELPER.isInPlotGrid(this)) {
+            ci.cancel();
+        }
+    }
+
     @WrapOperation(method = "updateCriticalState", at = @At(value = "INVOKE", target = "Lcom/brandon3055/brandonscore/handlers/ProcessHandler;addProcess(Lcom/brandon3055/brandonscore/handlers/IProcess;)V"))
     private void updateCriticalState$stopAddThisToProcessingPoll(IProcess process, Operation<Void> original) {
-        // Do nothing. Just intercept it. If you have any problem with it, I'll say it's just a mod for fun so ignore the performance OK?
+        if (!Sable.HELPER.isInPlotGrid(this)) {
+            original.call(process);
+        }
     }
 
     @ModifyExpressionValue(method = "updateCriticalState", at = @At(value = "INVOKE", target = "Lcom/brandon3055/draconicevolution/blocks/reactor/ProcessExplosion;isCalculationComplete()Z"))
     private boolean updateCriticalState$justStartYourCountDownINeedNoPreCalculation(boolean original) {
-        return true;
+        return Sable.HELPER.isInPlotGrid(this) || original;
     }
 
     @WrapOperation(method = "updateCriticalState", at = @At(value = "INVOKE", target = "Lcom/brandon3055/draconicevolution/blocks/reactor/ProcessExplosion;detonate()Z"))
     private boolean updateCriticalState$giveMeDatPos(ProcessExplosion instance, Operation<Boolean> original) {
         var helper = Sable.HELPER;
-        BlockPos pos;
-        if (helper.isInPlotGrid(this))
-            pos = BlockPos.containing(helper.projectOutOfSubLevel(this.level, new Vec3(getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ())));
-        else
-            pos = getBlockPos();
-        if (instance instanceof RememberDatPos r)
-            r.remember(pos);
+        if (helper.isInPlotGrid(this) && instance instanceof RememberDatPos rememberedExplosion) {
+            BlockPos pos = BlockPos.containing(helper.projectOutOfSubLevel(this.level, Vec3.atCenterOf(getBlockPos())));
+            rememberedExplosion.remember(pos);
+        }
         return original.call(instance);
     }
 }
