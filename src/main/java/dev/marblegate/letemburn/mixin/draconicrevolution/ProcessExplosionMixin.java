@@ -20,6 +20,7 @@ package dev.marblegate.letemburn.mixin.draconicrevolution;
 
 import codechicken.lib.vec.Vector3;
 import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
+import dev.marblegate.letemburn.compat.draconic.DraconicAnnulusPredicates;
 import dev.marblegate.letemburn.waaoh.RememberDatPos;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
 import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
@@ -27,6 +28,7 @@ import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Restriction(require = {
@@ -47,7 +49,16 @@ public abstract class ProcessExplosionMixin implements RememberDatPos {
     protected boolean calculationComplete;
 
     @Shadow
+    public int radius;
+
+    @Shadow
     public abstract void updateCalculation();
+
+    @Redirect(method = "updateCalculation", at = @At(value = "INVOKE", target = "Lcom/brandon3055/brandonscore/utils/Utils;getDistance(DDDD)D"), require = 1)
+    private double updateCalculation$replaceAnnulusSquareRoot(
+            double x, double z, double centreX, double centreZ) {
+        return DraconicAnnulusPredicates.membershipDistance(radius, x, z, centreX, centreZ);
+    }
 
     @Inject(method = "detonate", at = @At(value = "HEAD"))
     private void detonate$letsCalculateInSiteOkay(CallbackInfoReturnable<Boolean> cir) {

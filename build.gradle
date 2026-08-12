@@ -237,6 +237,14 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
+tasks.register('benchmarkDraconicAnnuli', JavaExec) {
+    group = 'verification'
+    description = 'Runs the deterministic Draconic explosion annulus microbenchmark.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.marblegate.letemburn.compat.draconic.DraconicAnnulusBenchmark'
+}
+
 tasks.named('processGameTestResources').configure {
     dependsOn generateGameTestStructures
 }
