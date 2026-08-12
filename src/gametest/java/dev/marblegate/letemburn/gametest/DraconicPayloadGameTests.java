@@ -195,10 +195,11 @@ public final class DraconicPayloadGameTests {
         SubLevelPhysicsSystem physicsSystem = LetEmBurnGameTests.requirePhysics(container);
         LetEmBurnGameTests.addWall(helper, 3);
         DraconicExplosionAudit.clearWithin(helper.getBounds());
+        // Keep the sublevel alive after payload consumption so its plot cannot be recycled before assertion.
         ServerSubLevel subLevel = spawnSubLevel(
                 container,
                 absolutePosition(helper, new Vector3d(2.5D, 4.0D, 1.5D)),
-                accessor -> placeFailedReactor(accessor, false));
+                accessor -> placeFailedReactor(accessor, true));
         RigidBodyHandle handle = physicsSystem.getPhysicsHandle(subLevel);
         BlockPos corePosition = subLevel.getPlot().getCenterBlock();
         LetEmBurnGameTests.launch(helper, handle, new Vector3d(0.0D, 100.0D, 20.0D));

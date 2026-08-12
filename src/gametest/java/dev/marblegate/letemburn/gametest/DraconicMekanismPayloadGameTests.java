@@ -35,6 +35,7 @@ import mekanism.common.attachments.BlockData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.joml.Vector3d;
 
@@ -57,10 +58,14 @@ public final class DraconicMekanismPayloadGameTests {
                 reactor.saveWithFullMetadata(helper.getLevel().registryAccess()));
         BlockData nestedPayload = MekanismPayloadGameTests.nestedContent(
                 helper.getLevel().registryAccess(), 2, reactorPayload);
+        // Keep the sublevel alive after payload consumption so its plot cannot be recycled before assertion.
         ServerSubLevel subLevel = spawnSubLevel(
                 container,
                 absolutePosition(helper, new Vector3d(2.5D, 4.0D, 1.5D)),
-                accessor -> MekanismPayloadGameTests.placeCardboardBox(accessor, nestedPayload));
+                accessor -> {
+                    MekanismPayloadGameTests.placeCardboardBox(accessor, nestedPayload);
+                    accessor.setBlock(BlockPos.ZERO.east(), Blocks.STONE.defaultBlockState(), 3);
+                });
         RigidBodyHandle handle = physicsSystem.getPhysicsHandle(subLevel);
         BlockPos payloadPosition = subLevel.getPlot().getCenterBlock();
         LetEmBurnGameTests.launch(helper, handle, new Vector3d(0.0D, 100.0D, 20.0D));
