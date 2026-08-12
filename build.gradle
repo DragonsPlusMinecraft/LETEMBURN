@@ -18,6 +18,31 @@ java {
     withSourcesJar()
 }
 
+def generatedGameTestResources = layout.buildDirectory.dir('generated/gameTestResources')
+def generateGameTestStructures = tasks.register('generateGameTestStructures') {
+    def encodedStructure = layout.projectDirectory.file('src/gametest/templates/bootstrap.nbt.base64')
+    def generatedStructure = generatedGameTestResources.map {
+        it.file('data/letemburn/structure/bootstrap.nbt')
+    }
+    inputs.file(encodedStructure)
+    outputs.file(generatedStructure)
+    doLast {
+        def outputFile = generatedStructure.get().asFile
+        outputFile.parentFile.mkdirs()
+        outputFile.bytes = Base64.decoder.decode(encodedStructure.asFile.text.trim())
+    }
+}
+
+sourceSets {
+    gameTest {
+        java.srcDir 'src/gametest/java'
+        resources.srcDir 'src/gametest/resources'
+        resources.srcDir generatedGameTestResources
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + compileClasspath + sourceSets.main.runtimeClasspath
+    }
+}
+
 tasks.withType(Jar).configureEach {
     exclude ".cache"
 }
@@ -68,6 +93,7 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(sourceSets.gameTest)
         }
     }
 }
@@ -77,6 +103,21 @@ configurations {
     compileClasspath.extendsFrom localImplementation
     runtimeClasspath.extendsFrom localImplementation
     runtimeClasspath.extendsFrom localRuntime
+}
+
+def supportedCompatRuntimes = ['draconic', 'mekanism'] as Set
+def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
+def enabledCompatRuntimes
+if (compatRuntimeSelection == 'full') {
+    enabledCompatRuntimes = supportedCompatRuntimes
+} else if (compatRuntimeSelection == 'minimal') {
+    enabledCompatRuntimes = [] as Set
+} else {
+    enabledCompatRuntimes = compatRuntimeSelection.split(',').collect { it.trim() }.findAll { !it.isEmpty() } as Set
+    def unsupportedCompatRuntimes = enabledCompatRuntimes - supportedCompatRuntimes
+    if (!unsupportedCompatRuntimes.isEmpty()) {
+        throw new GradleException("Unsupported compat_runtime entries: ${unsupportedCompatRuntimes.sort()}")
+    }
 }
 
 repositories {
@@ -118,13 +159,25 @@ dependencies {
     localImplementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
     localImplementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
 
-    localImplementation("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
-    localImplementation("maven.modrinth:brandons-core:${brandons_core_version}")
-    localImplementation("maven.modrinth:draconic-evolution:${draconic_evolution_version}")
+    compileOnly("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
+    compileOnly("maven.modrinth:brandons-core:${brandons_core_version}")
+    compileOnly("maven.modrinth:draconic-evolution:${draconic_evolution_version}")
+    if (enabledCompatRuntimes.contains('draconic')) {
+        localRuntime("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
+        localRuntime("maven.modrinth:brandons-core:${brandons_core_version}")
+        localRuntime("maven.modrinth:draconic-evolution:${draconic_evolution_version}")
+    }
 
-    localImplementation("maven.modrinth:mekanism:${mekanism_version}")
+    compileOnly("maven.modrinth:mekanism:${mekanism_version}")
+    if (enabledCompatRuntimes.contains('mekanism')) {
+        localRuntime("maven.modrinth:mekanism:${mekanism_version}")
+    }
 
     localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast test
+
+    testImplementation(platform("org.junit:junit-bom:${junit_version}"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
 }
 
@@ -141,7 +194,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_version            : mod_version,
             mod_authors            : mod_authors,
             mod_description        : mod_description,
-            mod_github             : mod_github
+            mod_github             : mod_github,
+            sable_version          : sable_version
     ]
     inputs.properties replaceProperties
     expand replaceProperties
@@ -172,6 +226,14 @@ build.dependsOn(spotlessApply)
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+tasks.named('processGameTestResources').configure {
+    dependsOn generateGameTestStructures
 }
 
 idea {
