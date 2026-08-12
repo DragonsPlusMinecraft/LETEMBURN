@@ -33,7 +33,18 @@ final class PneumaticAirHandlers {
     private PneumaticAirHandlers() {}
 
     static @Nullable IAirHandlerMachine resolve(BlockEntity blockEntity, Direction face) {
-        return PNCCapabilities.getAirHandler(blockEntity, face).orElse(null);
+        IAirHandlerMachine sided = PNCCapabilities.getAirHandler(blockEntity, face).orElse(null);
+        if (sided != null) {
+            return sided;
+        }
+
+        IAirHandlerMachine unsided = PNCCapabilities.getAirHandler(blockEntity).orElse(null);
+        if (unsided != null) {
+            return unsided;
+        }
+
+        List<IAirHandlerMachine> handlers = unique(blockEntity);
+        return handlers.size() == 1 ? handlers.getFirst() : null;
     }
 
     static List<IAirHandlerMachine> unique(BlockEntity blockEntity) {
