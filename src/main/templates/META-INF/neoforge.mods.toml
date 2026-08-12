@@ -39,3 +39,31 @@ file="META-INF/accesstransformer.cfg"
     versionRange="[${sable_version},)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="voltaic"
+    type="optional"
+    versionRange="[${voltaic_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="electrodynamics"
+    type="optional"
+    versionRange="[${electrodynamics_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="nuclearscience"
+    type="optional"
+    versionRange="[${nuclear_science_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="ballistix"
+    type="optional"
+    versionRange="[${ballistix_version},)"
+    ordering="AFTER"
+    side="BOTH"

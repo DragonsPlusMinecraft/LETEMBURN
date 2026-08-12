@@ -26,6 +26,7 @@ import net.neoforged.fml.ModList;
 
 public final class CompatibilityBootstrap {
     private static final Map<String, String> OPTIONAL_MODULES = Map.of(
+            "ballistix", "dev.marblegate.letemburn.compat.ballistix.BallistixCompatibilityModule",
             "draconicevolution", "dev.marblegate.letemburn.compat.draconic.DraconicCompatibilityModule",
             "mekanism", "dev.marblegate.letemburn.compat.mekanism.MekanismCompatibilityModule");
     private static boolean bootstrapped;

@@ -33,6 +33,9 @@ public final class GameTestRegistrar {
     public static void registerTests(RegisterGameTestsEvent event) {
         register(event, TEST_PACKAGE + "LetEmBurnGameTests");
         register(event, TEST_PACKAGE + "PayloadEnvelopeGameTests");
+        if (ModList.get().isLoaded("ballistix")) {
+            register(event, TEST_PACKAGE + "BallistixPayloadGameTests");
+        }
         if (ModList.get().isLoaded("mekanism")) {
             register(event, TEST_PACKAGE + "MekanismPayloadGameTests");
         }
@@ -41,6 +44,9 @@ public final class GameTestRegistrar {
         }
         if (ModList.get().isLoaded("mekanism") && ModList.get().isLoaded("draconicevolution")) {
             register(event, TEST_PACKAGE + "DraconicMekanismPayloadGameTests");
+        }
+        if (ModList.get().isLoaded("mekanism") && ModList.get().isLoaded("ballistix")) {
+            register(event, TEST_PACKAGE + "BallistixMekanismPayloadGameTests");
         }
     }
 

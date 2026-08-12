@@ -4,6 +4,8 @@
   "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ballistix.BlastMixin",
+    "ballistix.BlockExplosiveMixin",
     "draconicrevolution.ProcessExplosionMixin",
     "draconicrevolution.ReactorCoreMixin",
     "draconicrevolution.TileReactorCoreMixin",

@@ -75,11 +75,18 @@ public final class ChainReactionCoordinator {
         }
         List<DeferredEffectQueue.Failure<EffectKey>> failures = queue.drain();
         for (DeferredEffectQueue.Failure<EffectKey> failure : failures) {
-            LetEmBurn.LOGGER.error(
-                    "Failed to commit projected destructive effect {} (rollback attempted: {})",
-                    failure.key(),
-                    failure.rollbackAttempted(),
-                    failure.commitFailure());
+            if (failure.commitFailure() instanceof EffectCancelledException) {
+                LetEmBurn.LOGGER.debug(
+                        "Native destructive effect {} was cancelled; payload rollback attempted: {}",
+                        failure.key(),
+                        failure.rollbackAttempted());
+            } else {
+                LetEmBurn.LOGGER.error(
+                        "Failed to commit projected destructive effect {} (rollback attempted: {})",
+                        failure.key(),
+                        failure.rollbackAttempted(),
+                        failure.commitFailure());
+            }
             if (failure.rollbackFailure() != null) {
                 LetEmBurn.LOGGER.error("Failed to restore projected payload {}", failure.key(), failure.rollbackFailure());
             }
@@ -89,6 +96,7 @@ public final class ChainReactionCoordinator {
     private void levelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel level) {
             queues.remove(level);
+            ExplosionImpulseBridge.INSTANCE.clearLevel(level);
         }
     }
 }

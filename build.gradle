@@ -110,7 +110,7 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
-def supportedCompatRuntimes = ['draconic', 'mekanism'] as Set
+def supportedCompatRuntimes = ['ballistix', 'draconic', 'mekanism'] as Set
 def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
 def enabledCompatRuntimes
 if (compatRuntimeSelection == 'full') {
@@ -178,6 +178,17 @@ dependencies {
         localRuntime("maven.modrinth:mekanism:${mekanism_version}")
     }
 
+    compileOnly("curse.maven:voltaic-1237904:${voltaic_curse_file}")
+    compileOnly("curse.maven:electrodynamics-316867:${electrodynamics_curse_file}")
+    compileOnly("curse.maven:nuclear-science-318646:${nuclear_science_curse_file}")
+    compileOnly("curse.maven:ballistix-443915:${ballistix_curse_file}")
+    if (enabledCompatRuntimes.contains('ballistix')) {
+        localRuntime("curse.maven:voltaic-1237904:${voltaic_curse_file}")
+        localRuntime("curse.maven:electrodynamics-316867:${electrodynamics_curse_file}")
+        localRuntime("curse.maven:nuclear-science-318646:${nuclear_science_curse_file}")
+        localRuntime("curse.maven:ballistix-443915:${ballistix_curse_file}")
+    }
+
     localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast test
 
     testImplementation(platform("org.junit:junit-bom:${junit_version}"))
@@ -200,7 +211,11 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_authors            : mod_authors,
             mod_description        : mod_description,
             mod_github             : mod_github,
-            sable_version          : sable_version
+            sable_version          : sable_version,
+            ballistix_version       : ballistix_version,
+            nuclear_science_version: nuclear_science_version,
+            electrodynamics_version: electrodynamics_version,
+            voltaic_version         : voltaic_version
     ]
     inputs.properties replaceProperties
     expand replaceProperties
