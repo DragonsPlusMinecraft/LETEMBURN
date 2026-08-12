@@ -18,10 +18,19 @@
 
 package dev.marblegate.letemburn.mixin.gametest;
 
+import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
+import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import java.util.List;
+import java.util.function.BooleanSupplier;
 import net.minecraft.gametest.framework.GameTestServer;
+import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameTestServer.class)
@@ -30,5 +39,20 @@ public abstract class GameTestServerOriginMixin {
     private void letemburn$usePhysicsSafeOrigin(Args arguments) {
         arguments.set(0, 0);
         arguments.set(2, 0);
+    }
+
+    @Inject(method = "tickServer", at = @At(value = "INVOKE", target = "Lnet/minecraft/gametest/framework/GameTestServer;halt(Z)V"))
+    private void letemburn$removeDisposableSubLevels(BooleanSupplier hasTimeLeft, CallbackInfo ci) {
+        GameTestServer server = (GameTestServer) (Object) this;
+        for (ServerLevel level : server.getAllLevels()) {
+            ServerSubLevelContainer container = SubLevelContainer.getContainer(level);
+            if (container == null) {
+                continue;
+            }
+            for (ServerSubLevel subLevel : List.copyOf(container.getAllSubLevels())) {
+                container.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED);
+            }
+            container.getHoldingChunkMap().processChanges();
+        }
     }
 }
