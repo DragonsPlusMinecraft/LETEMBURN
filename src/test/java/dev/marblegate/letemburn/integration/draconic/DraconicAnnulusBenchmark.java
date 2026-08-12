@@ -43,7 +43,7 @@ public final class DraconicAnnulusBenchmark {
                 throw new IllegalStateException("A1 was not faster than A0 at radius 350");
             }
             System.out.printf(
-                    "radius=%d boxCandidates=%d sparseCandidates=%d legacy=%d ns A0=%d ns A1=%d ns A1/A0=%.3fx%n",
+                    "radius=%d boxCandidates=%d sparseCandidates=%d legacy=%d ns A0=%d ns A1=%d ns A0/A1=%.3fx%n",
                     radius,
                     (long) radius * 2L * radius * 2L,
                     legacy.acceptedPositions,
