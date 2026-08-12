@@ -51,6 +51,12 @@ public final class GameTestRegistrar {
         if (ModList.get().isLoaded("pneumaticcraft")) {
             register(event, TEST_PACKAGE + "PneumaticCraftGameTests");
         }
+        if (ModList.get().isLoaded("moretnt")) {
+            register(event, TEST_PACKAGE + "MoreTntGameTests");
+        }
+        if (ModList.get().isLoaded("moretnt") && ModList.get().isLoaded("mekanism")) {
+            register(event, TEST_PACKAGE + "MoreTntMekanismGameTests");
+        }
     }
 
     private static void register(RegisterGameTestsEvent event, String className) {

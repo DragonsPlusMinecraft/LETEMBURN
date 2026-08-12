@@ -10,6 +10,8 @@
     "draconicrevolution.ReactorCoreMixin",
     "draconicrevolution.TileReactorCoreMixin",
     "mekanism.BlockCardboardBoxMixin",
+    "moretnt.BaseExplosionMixin",
+    "moretnt.BaseTNTBlockMixin",
     "pneumaticcraft.AbstractAirHandlingBlockEntityMixin",
     "pneumaticcraft.MachineAirHandlerMixin",
     "pneumaticcraft.PneumaticCraftEntityBlockMixin",

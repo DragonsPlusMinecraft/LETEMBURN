@@ -74,3 +74,10 @@ file="META-INF/accesstransformer.cfg"
     versionRange="[${pneumaticcraft_version},)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="moretnt"
+    type="optional"
+    versionRange="[${more_fun_tnts_version},)"
+    ordering="AFTER"
+    side="BOTH"

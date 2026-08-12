@@ -29,6 +29,7 @@ public final class CompatibilityBootstrap {
             "ballistix", "dev.marblegate.letemburn.compat.ballistix.BallistixCompatibilityModule",
             "draconicevolution", "dev.marblegate.letemburn.compat.draconic.DraconicCompatibilityModule",
             "mekanism", "dev.marblegate.letemburn.compat.mekanism.MekanismCompatibilityModule",
+            "moretnt", "dev.marblegate.letemburn.compat.moretnt.MoreTntCompatibilityModule",
             "pneumaticcraft", "dev.marblegate.letemburn.compat.pneumaticcraft.PneumaticCompatibilityModule");
     private static boolean bootstrapped;
 
