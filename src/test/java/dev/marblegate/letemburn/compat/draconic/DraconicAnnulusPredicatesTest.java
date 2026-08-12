@@ -42,6 +42,23 @@ class DraconicAnnulusPredicatesTest {
     }
 
     @Test
+    void a1PreservesEveryExplosionObservableThroughRadiusFiveHundred() {
+        for (int radius = 0; radius <= MAX_AUDITED_RADIUS; radius++) {
+            Trace legacy = scan(radius, DraconicAnnulusPredicatesTest::legacyContains);
+            Trace sparse = scanSparse(radius);
+
+            assertEquals(
+                    legacy.observableSnapshot(),
+                    sparse.observableSnapshot(),
+                    "observable trace mismatch at radius " + radius);
+            assertEquals(sparse.acceptedPositions.size(), sparse.candidates, "A1 visited a rejected coordinate");
+            assertTrue(
+                    sparse.candidates <= (8L * radius) + 1L,
+                    "A1 candidate count did not remain bounded by circumference at radius " + radius);
+        }
+    }
+
+    @Test
     void redirectedComparisonHasExactlyTheLegacyBoundaries() {
         for (int radius = 0; radius <= MAX_AUDITED_RADIUS; radius++) {
             for (int deltaX = -radius; deltaX < radius; deltaX++) {
@@ -71,6 +88,17 @@ class DraconicAnnulusPredicatesTest {
         assertFalse(DraconicAnnulusPredicates.containsSquared(5, 3, 0));
     }
 
+    @Test
+    void integerSquareRootIsExactAtLongBoundaries() {
+        assertEquals(0L, DraconicAnnulusPredicates.floorSquareRoot(0L));
+        assertEquals(1L, DraconicAnnulusPredicates.floorSquareRoot(1L));
+        assertEquals(1L, DraconicAnnulusPredicates.floorSquareRoot(2L));
+        assertEquals(2L, DraconicAnnulusPredicates.floorSquareRoot(8L));
+        assertEquals(3L, DraconicAnnulusPredicates.floorSquareRoot(9L));
+        assertEquals(3_037_000_499L, DraconicAnnulusPredicates.floorSquareRoot(Long.MAX_VALUE));
+        assertEquals(3_037_000_500L, DraconicAnnulusPredicates.ceilingSquareRoot(Long.MAX_VALUE));
+    }
+
     private static Trace scan(int radius, AnnulusPredicate predicate) {
         Trace trace = new Trace(radius);
         for (int deltaX = -radius; deltaX < radius; deltaX++) {
@@ -80,6 +108,25 @@ class DraconicAnnulusPredicatesTest {
                     trace.accept(deltaX, deltaZ);
                 }
             }
+        }
+        return trace;
+    }
+
+    private static Trace scanSparse(int radius) {
+        Trace trace = new Trace(radius);
+        for (int deltaX = -radius; deltaX < radius; deltaX++) {
+            DraconicAnnulusPredicates.ScanLine line = DraconicAnnulusPredicates.scanLine(radius, deltaX);
+            long lineCandidates = 0L;
+            for (int deltaZ = line.firstDeltaZ(); !line.isEmpty() && deltaZ <= line.lastDeltaZ();) {
+                trace.candidate();
+                lineCandidates++;
+                assertTrue(
+                        DraconicAnnulusPredicates.containsSquared(radius, deltaX, deltaZ),
+                        "A1 emitted a rejected coordinate");
+                trace.accept(deltaX, deltaZ);
+                deltaZ = line.adjustIncrementedDeltaZ(deltaZ + 1);
+            }
+            assertEquals(line.candidateCount(), lineCandidates, "scan-line count mismatch");
         }
         return trace;
     }
@@ -102,6 +149,7 @@ class DraconicAnnulusPredicatesTest {
         private final List<Long> worldWriteOrder = new ArrayList<>();
         private final LinkedHashSet<Long> setInsertionOrder = new LinkedHashSet<>();
         private final List<Long> floatingPointRawBits = new ArrayList<>();
+        private final List<Long> damageRawBits = new ArrayList<>();
         private long candidates;
         private long randomCalls;
 
@@ -135,6 +183,7 @@ class DraconicAnnulusPredicatesTest {
             floatingPointRawBits.add(Double.doubleToRawLongBits(upperResult));
             floatingPointRawBits.add(Double.doubleToRawLongBits(lowerResult));
             floatingPointRawBits.add((long) Float.floatToRawIntBits((float) (upperResult + lowerResult)));
+            damageRawBits.add(Double.doubleToRawLongBits((upperResult + lowerResult) / (radius + 1D)));
 
             if (((upperRead ^ randomInt) & 1L) == 0L) {
                 worldWriteOrder.add(position);
@@ -150,7 +199,38 @@ class DraconicAnnulusPredicatesTest {
                     List.copyOf(worldReadOrder),
                     List.copyOf(worldWriteOrder),
                     List.copyOf(setInsertionOrder),
-                    List.copyOf(floatingPointRawBits));
+                    List.copyOf(floatingPointRawBits),
+                    List.copyOf(damageRawBits),
+                    packetTrace(),
+                    finalStateDigest());
+        }
+
+        private ObservableTraceSnapshot observableSnapshot() {
+            return new ObservableTraceSnapshot(
+                    List.copyOf(acceptedPositions),
+                    randomCalls,
+                    List.copyOf(worldReadOrder),
+                    List.copyOf(worldWriteOrder),
+                    List.copyOf(setInsertionOrder),
+                    List.copyOf(floatingPointRawBits),
+                    List.copyOf(damageRawBits),
+                    packetTrace(),
+                    finalStateDigest());
+        }
+
+        private List<Long> packetTrace() {
+            return List.of(((long) radius << 32) ^ acceptedPositions.size(), finalStateDigest());
+        }
+
+        private long finalStateDigest() {
+            long digest = 0xCBF29CE484222325L;
+            for (long position : worldWriteOrder) {
+                digest = (digest ^ position) * 0x100000001B3L;
+            }
+            for (long position : setInsertionOrder) {
+                digest = (digest ^ Long.rotateLeft(position, 17)) * 0x100000001B3L;
+            }
+            return digest;
         }
 
         private static long pack(int x, int z) {
@@ -165,5 +245,19 @@ class DraconicAnnulusPredicatesTest {
             List<Long> worldReadOrder,
             List<Long> worldWriteOrder,
             List<Long> setInsertionOrder,
-            List<Long> floatingPointRawBits) {}
+            List<Long> floatingPointRawBits,
+            List<Long> damageRawBits,
+            List<Long> packetTrace,
+            long finalStateDigest) {}
+
+    private record ObservableTraceSnapshot(
+            List<Long> acceptedPositions,
+            long randomCalls,
+            List<Long> worldReadOrder,
+            List<Long> worldWriteOrder,
+            List<Long> setInsertionOrder,
+            List<Long> floatingPointRawBits,
+            List<Long> damageRawBits,
+            List<Long> packetTrace,
+            long finalStateDigest) {}
 }

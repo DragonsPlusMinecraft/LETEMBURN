@@ -62,4 +62,82 @@ public final class DraconicAnnulusPredicates {
         long innerSquared = innerRadius * innerRadius;
         return distanceSquared < outerSquared && distanceSquared >= innerSquared;
     }
+
+    public static ScanLine scanLine(int radius, int deltaX) {
+        if (radius <= 0) {
+            return ScanLine.EMPTY;
+        }
+
+        long deltaXSquared = (long) deltaX * deltaX;
+        long outerSquared = (long) radius * radius;
+        long outerRemainder = outerSquared - deltaXSquared - 1L;
+        if (outerRemainder < 0L) {
+            return ScanLine.EMPTY;
+        }
+
+        int outerAbsoluteZ = Math.toIntExact(floorSquareRoot(outerRemainder));
+        long innerRadius = (long) radius - 1L;
+        long innerRemainder = (innerRadius * innerRadius) - deltaXSquared;
+        int lowerAbsoluteZ = innerRemainder <= 0L ? 0 : Math.toIntExact(ceilingSquareRoot(innerRemainder));
+        if (lowerAbsoluteZ > outerAbsoluteZ) {
+            return ScanLine.EMPTY;
+        }
+        return new ScanLine(-outerAbsoluteZ, lowerAbsoluteZ, outerAbsoluteZ);
+    }
+
+    static long floorSquareRoot(long value) {
+        if (value < 0L) {
+            throw new IllegalArgumentException("Cannot take the integer square root of a negative value");
+        }
+
+        long remainder = value;
+        long root = 0L;
+        long bit = 1L << 62;
+        while (bit > remainder) {
+            bit >>>= 2;
+        }
+        while (bit != 0L) {
+            long trial = root + bit;
+            if (remainder >= trial) {
+                remainder -= trial;
+                root = (root >>> 1) + bit;
+            } else {
+                root >>>= 1;
+            }
+            bit >>>= 2;
+        }
+        return root;
+    }
+
+    static long ceilingSquareRoot(long value) {
+        long floor = floorSquareRoot(value);
+        return floor * floor == value ? floor : floor + 1L;
+    }
+
+    public record ScanLine(int firstDeltaZ, int lowerAbsoluteZ, int lastDeltaZ) {
+        private static final ScanLine EMPTY = new ScanLine(1, 0, 0);
+
+        public boolean isEmpty() {
+            return firstDeltaZ > lastDeltaZ;
+        }
+
+        public int adjustIncrementedDeltaZ(int incrementedDeltaZ) {
+            if (lowerAbsoluteZ > 0
+                    && incrementedDeltaZ > -lowerAbsoluteZ
+                    && incrementedDeltaZ < lowerAbsoluteZ) {
+                return lowerAbsoluteZ;
+            }
+            return incrementedDeltaZ;
+        }
+
+        public long candidateCount() {
+            if (isEmpty()) {
+                return 0L;
+            }
+            if (lowerAbsoluteZ == 0) {
+                return (long) lastDeltaZ - firstDeltaZ + 1L;
+            }
+            return 2L * (lastDeltaZ - lowerAbsoluteZ + 1L);
+        }
+    }
 }

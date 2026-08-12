@@ -34,17 +34,23 @@ public final class DraconicAnnulusBenchmark {
         for (int radius : RADII) {
             Result legacy = measure(radius, DraconicAnnulusBenchmark::scanLegacy);
             Result a0 = measure(radius, DraconicAnnulusBenchmark::scanA0);
-            if (legacy.acceptedPositions != a0.acceptedPositions) {
-                throw new IllegalStateException("A0 changed the accepted position count at radius " + radius);
+            Result a1 = measure(radius, DraconicAnnulusBenchmark::scanA1);
+            if (legacy.acceptedPositions != a0.acceptedPositions
+                    || legacy.acceptedPositions != a1.acceptedPositions) {
+                throw new IllegalStateException("An optimized scan changed the accepted position count at radius " + radius);
+            }
+            if (radius == 350 && a1.medianNanos >= a0.medianNanos) {
+                throw new IllegalStateException("A1 was not faster than A0 at radius 350");
             }
             System.out.printf(
-                    "radius=%d candidates=%d accepted=%d legacy=%d ns A0=%d ns speedup=%.3fx%n",
+                    "radius=%d boxCandidates=%d sparseCandidates=%d legacy=%d ns A0=%d ns A1=%d ns A1/A0=%.3fx%n",
                     radius,
                     (long) radius * 2L * radius * 2L,
                     legacy.acceptedPositions,
                     legacy.medianNanos,
                     a0.medianNanos,
-                    (double) legacy.medianNanos / a0.medianNanos);
+                    a1.medianNanos,
+                    (double) a0.medianNanos / a1.medianNanos);
         }
     }
 
@@ -85,6 +91,21 @@ public final class DraconicAnnulusBenchmark {
                 if (DraconicAnnulusPredicates.containsSquared(radius, deltaX, deltaZ)) {
                     accepted++;
                 }
+            }
+        }
+        return accepted;
+    }
+
+    private static long scanA1(int radius) {
+        long accepted = 0L;
+        for (int deltaX = -radius; deltaX < radius; deltaX++) {
+            DraconicAnnulusPredicates.ScanLine line = DraconicAnnulusPredicates.scanLine(radius, deltaX);
+            for (int deltaZ = line.firstDeltaZ(); !line.isEmpty() && deltaZ <= line.lastDeltaZ();) {
+                if (!DraconicAnnulusPredicates.containsSquared(radius, deltaX, deltaZ)) {
+                    throw new IllegalStateException("A1 emitted a rejected coordinate");
+                }
+                accepted++;
+                deltaZ = line.adjustIncrementedDeltaZ(deltaZ + 1);
             }
         }
         return accepted;

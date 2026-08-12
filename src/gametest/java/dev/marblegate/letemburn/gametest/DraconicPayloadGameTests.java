@@ -23,6 +23,7 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPosition;
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
+import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCore;
 import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCore.ReactorState;
 import com.brandon3055.draconicevolution.init.DEContent;
@@ -51,6 +52,27 @@ public final class DraconicPayloadGameTests {
     static final int SAFE_COUNTDOWN = 10_000;
 
     private DraconicPayloadGameTests() {}
+
+    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 20)
+    public static void sparseAnnulusMixinExecutesWithoutDetonating(GameTestHelper helper) {
+        Vector3d absoluteOrigin = absolutePosition(helper, new Vector3d(5.5D, 20.0D, 5.5D));
+        BlockPos origin = BlockPos.containing(absoluteOrigin.x, absoluteOrigin.y, absoluteOrigin.z);
+        ProcessExplosion calculation = new ProcessExplosion(origin, 5, helper.getLevel(), -1);
+        calculation.enableEffect = false;
+        for (int step = 0; step < 5; step++) {
+            calculation.updateCalculation();
+        }
+
+        if (!calculation.isCalculationComplete() || calculation.radius != 5) {
+            helper.fail("Sparse annulus calculation did not reach the expected safe radius");
+            return;
+        }
+        if (calculation.destroyedBlocks.size() != 5) {
+            helper.fail("Sparse annulus calculation changed the number of staged radius layers");
+            return;
+        }
+        helper.succeed();
+    }
 
     @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 20)
     public static void failedReactorProbeUsesExactImpactThreshold(GameTestHelper helper) {
