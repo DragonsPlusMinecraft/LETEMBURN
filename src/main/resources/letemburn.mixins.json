@@ -10,6 +10,9 @@
     "draconicrevolution.ReactorCoreMixin",
     "draconicrevolution.TileReactorCoreMixin",
     "mekanism.BlockCardboardBoxMixin",
+    "pneumaticcraft.AbstractAirHandlingBlockEntityMixin",
+    "pneumaticcraft.MachineAirHandlerMixin",
+    "pneumaticcraft.PneumaticCraftEntityBlockMixin",
     "sable.ExplosiveBlockCallbackMixin"
   ],
   "injectors": {

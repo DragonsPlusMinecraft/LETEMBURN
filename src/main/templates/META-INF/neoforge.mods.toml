@@ -67,3 +67,10 @@ file="META-INF/accesstransformer.cfg"
     versionRange="[${ballistix_version},)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="pneumaticcraft"
+    type="optional"
+    versionRange="[${pneumaticcraft_version},)"
+    ordering="AFTER"
+    side="BOTH"

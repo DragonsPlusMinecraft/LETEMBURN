@@ -110,7 +110,7 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
-def supportedCompatRuntimes = ['ballistix', 'draconic', 'mekanism'] as Set
+def supportedCompatRuntimes = ['ballistix', 'draconic', 'mekanism', 'pneumaticcraft'] as Set
 def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
 def enabledCompatRuntimes
 if (compatRuntimeSelection == 'full') {
@@ -189,6 +189,11 @@ dependencies {
         localRuntime("curse.maven:ballistix-443915:${ballistix_curse_file}")
     }
 
+    compileOnly("curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}")
+    if (enabledCompatRuntimes.contains('pneumaticcraft')) {
+        localRuntime("curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}")
+    }
+
     localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast test
 
     testImplementation(platform("org.junit:junit-bom:${junit_version}"))
@@ -215,7 +220,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             ballistix_version       : ballistix_version,
             nuclear_science_version: nuclear_science_version,
             electrodynamics_version: electrodynamics_version,
-            voltaic_version         : voltaic_version
+            voltaic_version         : voltaic_version,
+            pneumaticcraft_version  : pneumaticcraft_version
     ]
     inputs.properties replaceProperties
     expand replaceProperties
