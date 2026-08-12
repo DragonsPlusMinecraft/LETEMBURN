@@ -34,6 +34,11 @@ def generateGameTestStructures = tasks.register('generateGameTestStructures') {
 }
 
 sourceSets {
+    test {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += output + compileClasspath + sourceSets.main.runtimeClasspath
+    }
+
     gameTest {
         java.srcDir 'src/gametest/java'
         resources.srcDir 'src/gametest/resources'
