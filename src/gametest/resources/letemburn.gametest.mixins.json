@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.gametest",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "GameTestServerOriginMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

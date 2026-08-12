@@ -54,7 +54,7 @@ public final class PneumaticCraftGameTests {
 
     private PneumaticCraftGameTests() {}
 
-    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
+    @GameTest(batch = "letemburn_pnc_positive_leak", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
     public static void positiveLeakMovesAndRotatesOffCentreBody(GameTestHelper helper) {
         MachineBody body = spawnMachineBody(helper, new Vector3d(4.0D, 5.0D, 4.0D), true);
         AtomicInteger airBefore = new AtomicInteger();
@@ -89,7 +89,7 @@ public final class PneumaticCraftGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
+    @GameTest(batch = "letemburn_pnc_negative_leak", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
     public static void negativePressureReversesLeakThrust(GameTestHelper helper) {
         MachineBody body = spawnMachineBody(helper, new Vector3d(4.0D, 5.0D, 4.0D), false);
         AtomicInteger absoluteAirBefore = new AtomicInteger();
@@ -117,7 +117,7 @@ public final class PneumaticCraftGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
+    @GameTest(batch = "letemburn_pnc_impact_thresholds", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
     public static void impactThresholdsLeakAndRuptureTransactionally(GameTestHelper helper) {
         if (!BlockWithSubLevelCollisionCallback.hasCallback(
                 ModBlocks.AIR_COMPRESSOR.get().defaultBlockState())) {
@@ -186,7 +186,7 @@ public final class PneumaticCraftGameTests {
                 .thenSucceed();
     }
 
-    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 120)
+    @GameTest(batch = "letemburn_pnc_physical_collision", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 120)
     public static void physicalSableCollisionDispatchesMachineImpact(GameTestHelper helper) {
         if (!BlockWithSubLevelCollisionCallback.hasCallback(
                 ModBlocks.AIR_COMPRESSOR.get().defaultBlockState())) {
