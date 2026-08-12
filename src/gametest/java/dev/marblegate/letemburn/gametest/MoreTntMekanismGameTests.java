@@ -22,7 +22,7 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.moretnt.MoreTntImpactAudit;
+import dev.marblegate.letemburn.integration.moretnt.MoreTntImpactAudit;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;

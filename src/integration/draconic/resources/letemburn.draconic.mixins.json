@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.draconic",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ProcessExplosionMixin",
+    "ReactorCoreMixin",
+    "TileReactorCoreMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8",
+  "client": [
+    "BlockEntityRenderDispatcherMixin"
+  ]
+}

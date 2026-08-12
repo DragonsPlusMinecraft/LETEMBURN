@@ -16,8 +16,7 @@ description='''${mod_description}'''
 [[mixins]]
 config="${mod_id}.mixins.json"
 
-[[accessTransformers]]
-file="META-INF/accesstransformer.cfg"
+${integration_mixin_blocks}
 
 [[dependencies."${mod_id}"]]
     modId="neoforge"
@@ -40,44 +39,4 @@ file="META-INF/accesstransformer.cfg"
     ordering="AFTER"
     side="BOTH"
 
-[[dependencies."${mod_id}"]]
-    modId="voltaic"
-    type="optional"
-    versionRange="[${voltaic_version},)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies."${mod_id}"]]
-    modId="electrodynamics"
-    type="optional"
-    versionRange="[${electrodynamics_version},)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies."${mod_id}"]]
-    modId="nuclearscience"
-    type="optional"
-    versionRange="[${nuclear_science_version},)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies."${mod_id}"]]
-    modId="ballistix"
-    type="optional"
-    versionRange="[${ballistix_version},)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies."${mod_id}"]]
-    modId="pneumaticcraft"
-    type="optional"
-    versionRange="[${pneumaticcraft_version},)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies."${mod_id}"]]
-    modId="moretnt"
-    type="optional"
-    versionRange="[${more_fun_tnts_version},)"
-    ordering="AFTER"
-    side="BOTH"
+${optional_dependency_blocks}

@@ -23,9 +23,9 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPositio
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.core.ChainReactionCoordinator;
-import dev.marblegate.letemburn.compat.core.PayloadEnvelopeResolver;
-import dev.marblegate.letemburn.compat.vanilla.VanillaTntImpactAudit;
+import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
+import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
+import dev.marblegate.letemburn.integration.vanilla.VanillaTntImpactAudit;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;

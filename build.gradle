@@ -18,6 +18,71 @@ java {
     withSourcesJar()
 }
 
+def integrations = [
+        draconic      : [
+                modVersions: [draconicevolution: draconic_evolution_version],
+                dependencies: [
+                        "maven.modrinth:codechicken-lib:${codechicken_lib_version}",
+                        "maven.modrinth:brandons-core:${brandons_core_version}",
+                        "maven.modrinth:draconic-evolution:${draconic_evolution_version}"
+                ],
+                mixinConfig: "${mod_id}.draconic.mixins.json"
+        ],
+        mekanism      : [
+                modVersions: [mekanism: mekanism_metadata_version],
+                dependencies: [
+                        "maven.modrinth:mekanism:${mekanism_version}"
+                ],
+                mixinConfig: "${mod_id}.mekanism.mixins.json"
+        ],
+        ballistix     : [
+                modVersions: [
+                        voltaic       : voltaic_version,
+                        electrodynamics: electrodynamics_version,
+                        nuclearscience : nuclear_science_version,
+                        ballistix      : ballistix_version
+                ],
+                dependencies: [
+                        "curse.maven:voltaic-1237904:${voltaic_curse_file}",
+                        "curse.maven:electrodynamics-316867:${electrodynamics_curse_file}",
+                        "curse.maven:nuclear-science-318646:${nuclear_science_curse_file}",
+                        "curse.maven:ballistix-443915:${ballistix_curse_file}"
+                ],
+                mixinConfig: "${mod_id}.ballistix.mixins.json"
+        ],
+        pneumaticcraft: [
+                modVersions: [pneumaticcraft: pneumaticcraft_version],
+                dependencies: [
+                        "curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}"
+                ],
+                mixinConfig: "${mod_id}.pneumaticcraft.mixins.json"
+        ],
+        moretnt       : [
+                modVersions: [moretnt: more_fun_tnts_version],
+                dependencies: [
+                        "curse.maven:more-fun-tnts-895335:${more_fun_tnts_curse_file}"
+                ],
+                mixinConfig: "${mod_id}.moretnt.mixins.json"
+        ]
+]
+
+def supportedCompatRuntimes = integrations.keySet() as Set
+def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
+def enabledCompatRuntimes
+if (compatRuntimeSelection == 'full') {
+    enabledCompatRuntimes = supportedCompatRuntimes
+} else if (compatRuntimeSelection == 'minimal') {
+    enabledCompatRuntimes = [] as Set
+} else {
+    enabledCompatRuntimes = compatRuntimeSelection.split(',')
+            .collect { it.trim() }
+            .findAll { !it.isEmpty() } as Set
+    def unsupportedCompatRuntimes = enabledCompatRuntimes - supportedCompatRuntimes
+    if (!unsupportedCompatRuntimes.isEmpty()) {
+        throw new GradleException("Unsupported compat_runtime entries: ${unsupportedCompatRuntimes.sort()}")
+    }
+}
+
 def generatedGameTestResources = layout.buildDirectory.dir('generated/gameTestResources')
 def generateGameTestStructures = tasks.register('generateGameTestStructures') {
     def encodedStructure = layout.projectDirectory.file('src/gametest/templates/bootstrap.nbt.base64')
@@ -34,9 +99,27 @@ def generateGameTestStructures = tasks.register('generateGameTestStructures') {
 }
 
 sourceSets {
+    integrations.each { name, ignored ->
+        create(name) {
+            java.srcDir "src/integration/${name}/java"
+            resources.srcDir "src/integration/${name}/resources"
+            compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        }
+    }
+
+    main {
+        integrations.each { name, ignored ->
+            runtimeClasspath += sourceSets[name].output
+        }
+    }
+
     test {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
-        runtimeClasspath += output + compileClasspath + sourceSets.main.runtimeClasspath
+        runtimeClasspath += output + sourceSets.main.output + sourceSets.main.runtimeClasspath
+        integrations.each { name, ignored ->
+            compileClasspath += sourceSets[name].output
+            runtimeClasspath += sourceSets[name].output
+        }
     }
 
     gameTest {
@@ -44,12 +127,29 @@ sourceSets {
         resources.srcDir 'src/gametest/resources'
         resources.srcDir generatedGameTestResources
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
-        runtimeClasspath += output + compileClasspath + sourceSets.main.runtimeClasspath
+        runtimeClasspath += output + sourceSets.main.output + sourceSets.main.runtimeClasspath
+        integrations.each { name, ignored ->
+            compileClasspath += sourceSets[name].output
+            runtimeClasspath += sourceSets[name].output
+        }
     }
 }
 
 tasks.withType(Jar).configureEach {
-    exclude ".cache"
+    exclude '.cache'
+}
+
+tasks.named('jar', Jar).configure {
+    integrations.each { name, ignored ->
+        from sourceSets[name].output
+    }
+}
+
+tasks.named('sourcesJar', Jar).configure {
+    includeEmptyDirs = false
+    integrations.each { name, ignored ->
+        from sourceSets[name].allSource
+    }
 }
 
 neoForge {
@@ -59,8 +159,6 @@ neoForge {
         mappingsVersion = project.parchment_mappings_version
         minecraftVersion = project.parchment_minecraft_version
     }
-
-    // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
 
     runs {
         client {
@@ -75,22 +173,21 @@ neoForge {
         }
 
         gameTestServer {
-            type = "gameTestServer"
+            type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
         data {
             data()
             programArguments.addAll '--mod', project.mod_id,
-                                    '--all',
-                                    '--output', file('src/generated/resources/').getAbsolutePath(),
-                                    '--existing', file('src/main/resources/').getAbsolutePath(),
-                                    '--existing-mod', 'create'
+                    '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath(),
+                    '--existing-mod', 'create'
         }
 
         configureEach {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
-
             logLevel = org.slf4j.event.Level.DEBUG
         }
     }
@@ -98,6 +195,9 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            integrations.each { name, ignored ->
+                sourceSet(sourceSets[name])
+            }
             sourceSet(sourceSets.gameTest)
         }
     }
@@ -110,18 +210,30 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
-def supportedCompatRuntimes = ['ballistix', 'draconic', 'mekanism', 'moretnt', 'pneumaticcraft'] as Set
-def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
-def enabledCompatRuntimes
-if (compatRuntimeSelection == 'full') {
-    enabledCompatRuntimes = supportedCompatRuntimes
-} else if (compatRuntimeSelection == 'minimal') {
-    enabledCompatRuntimes = [] as Set
-} else {
-    enabledCompatRuntimes = compatRuntimeSelection.split(',').collect { it.trim() }.findAll { !it.isEmpty() } as Set
-    def unsupportedCompatRuntimes = enabledCompatRuntimes - supportedCompatRuntimes
-    if (!unsupportedCompatRuntimes.isEmpty()) {
-        throw new GradleException("Unsupported compat_runtime entries: ${unsupportedCompatRuntimes.sort()}")
+integrations.each { name, ignored ->
+    def integrationDependencies = configurations.create("${name}LocalImplementation") {
+        canBeConsumed = false
+        canBeResolved = false
+    }
+    configurations.named("${name}CompileClasspath") {
+        extendsFrom integrationDependencies
+    }
+    configurations.named("${name}RuntimeClasspath") {
+        extendsFrom integrationDependencies
+    }
+    configurations.named('testCompileClasspath') {
+        extendsFrom integrationDependencies
+    }
+    configurations.named('testRuntimeClasspath') {
+        extendsFrom integrationDependencies
+    }
+    configurations.named('gameTestCompileClasspath') {
+        extendsFrom integrationDependencies
+    }
+    if (enabledCompatRuntimes.contains(name)) {
+        configurations.named('runtimeClasspath') {
+            extendsFrom integrationDependencies
+        }
     }
 }
 
@@ -133,12 +245,12 @@ repositories {
     maven { url = uri('https://maven.fallenbreath.me/releases') } // Conditional Mixin
     maven { url = uri('https://www.cursemaven.com') }
     maven { url = uri('https://api.modrinth.com/maven') }
-    maven { url = uri('https://raw.githubusercontent.com/Fuzss/modresources/main/maven') } // NeoForge config api port, needed by ponder
+    maven { url = uri('https://raw.githubusercontent.com/Fuzss/modresources/main/maven') } // NeoForge config API port, needed by Ponder
     maven { url = uri('https://maven.ryanhcode.dev/releases') } // RyanHCode Maven - Sable
 }
 
 dependencies {
-    jarJar(implementation("me.fallenbreath:conditional-mixin-neoforge")) {
+    jarJar(implementation('me.fallenbreath:conditional-mixin-neoforge')) {
         version {
             strictly "[${conditional_mixin_version},)"
             prefer conditional_mixin_version
@@ -164,75 +276,62 @@ dependencies {
     localImplementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
     localImplementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
 
-    compileOnly("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
-    compileOnly("maven.modrinth:brandons-core:${brandons_core_version}")
-    compileOnly("maven.modrinth:draconic-evolution:${draconic_evolution_version}")
-    if (enabledCompatRuntimes.contains('draconic')) {
-        localRuntime("maven.modrinth:codechicken-lib:${codechicken_lib_version}")
-        localRuntime("maven.modrinth:brandons-core:${brandons_core_version}")
-        localRuntime("maven.modrinth:draconic-evolution:${draconic_evolution_version}")
+    integrations.each { name, integration ->
+        integration.dependencies.each { notation ->
+            add("${name}LocalImplementation", notation)
+        }
     }
 
-    compileOnly("maven.modrinth:mekanism:${mekanism_version}")
-    if (enabledCompatRuntimes.contains('mekanism')) {
-        localRuntime("maven.modrinth:mekanism:${mekanism_version}")
-    }
-
-    compileOnly("curse.maven:voltaic-1237904:${voltaic_curse_file}")
-    compileOnly("curse.maven:electrodynamics-316867:${electrodynamics_curse_file}")
-    compileOnly("curse.maven:nuclear-science-318646:${nuclear_science_curse_file}")
-    compileOnly("curse.maven:ballistix-443915:${ballistix_curse_file}")
-    if (enabledCompatRuntimes.contains('ballistix')) {
-        localRuntime("curse.maven:voltaic-1237904:${voltaic_curse_file}")
-        localRuntime("curse.maven:electrodynamics-316867:${electrodynamics_curse_file}")
-        localRuntime("curse.maven:nuclear-science-318646:${nuclear_science_curse_file}")
-        localRuntime("curse.maven:ballistix-443915:${ballistix_curse_file}")
-    }
-
-    compileOnly("curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}")
-    if (enabledCompatRuntimes.contains('pneumaticcraft')) {
-        localRuntime("curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}")
-    }
-
-    compileOnly("curse.maven:more-fun-tnts-895335:${more_fun_tnts_curse_file}")
-    if (enabledCompatRuntimes.contains('moretnt')) {
-        localRuntime("curse.maven:more-fun-tnts-895335:${more_fun_tnts_curse_file}")
-    }
-
-    localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast test
+    localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast tests
 
     testImplementation(platform("org.junit:junit-bom:${junit_version}"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
 
-var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [
-            minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
-            loader_version_range   : loader_version_range,
-            mod_id                 : mod_id,
-            mod_name               : mod_name,
-            mod_license            : mod_license,
-            mod_version            : mod_version,
-            mod_authors            : mod_authors,
-            mod_description        : mod_description,
-            mod_github             : mod_github,
-            sable_version          : sable_version,
-            ballistix_version       : ballistix_version,
-            nuclear_science_version: nuclear_science_version,
-            electrodynamics_version: electrodynamics_version,
-            voltaic_version         : voltaic_version,
-            pneumaticcraft_version  : pneumaticcraft_version,
-            more_fun_tnts_version   : more_fun_tnts_version
+def integrationMixinBlocks = integrations.values()
+        .collect { integration -> "[[mixins]]\nconfig=\"${integration.mixinConfig}\"" }
+        .join('\n\n')
+def optionalDependencyBlocks = integrations.values()
+        .collectMany { integration ->
+            integration.modVersions.collect { dependencyModId, dependencyVersion ->
+                [modId: dependencyModId, version: dependencyVersion]
+            }
+        }
+        .collect { dependency ->
+            [
+                    "[[dependencies.\"${mod_id}\"]]",
+                    "    modId=\"${dependency.modId}\"",
+                    '    type="optional"',
+                    "    versionRange=\"[${dependency.version},)\"",
+                    '    ordering="AFTER"',
+                    '    side="BOTH"'
+            ].join('\n')
+        }
+        .join('\n\n')
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def replaceProperties = [
+            minecraft_version          : minecraft_version,
+            minecraft_version_range    : minecraft_version_range,
+            neo_version                : neo_version,
+            neo_version_range          : neo_version_range,
+            loader_version_range       : loader_version_range,
+            mod_id                     : mod_id,
+            mod_name                   : mod_name,
+            mod_license                : mod_license,
+            mod_version                : mod_version,
+            mod_authors                : mod_authors,
+            mod_description            : mod_description,
+            mod_github                 : mod_github,
+            sable_version              : sable_version,
+            integration_mixin_blocks   : integrationMixinBlocks,
+            optional_dependency_blocks : optionalDependencyBlocks
     ]
     inputs.properties replaceProperties
     expand replaceProperties
-    from "src/main/templates"
-    into "build/generated/sources/modMetadata"
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
 }
 
 sourceSets.main.resources {
@@ -249,15 +348,17 @@ spotless {
         removeUnusedImports()
         toggleOffOn()
         importOrder()
-        eclipse().configFile "codeformat/formatter-config.xml"
-        licenseHeaderFile "codeformat/HEADER.txt"
+        eclipse().configFile 'codeformat/formatter-config.xml'
+        licenseHeaderFile 'codeformat/HEADER.txt'
     }
 }
 
-build.dependsOn(spotlessApply)
+tasks.named('check').configure {
+    dependsOn tasks.named('spotlessCheck')
+}
 
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.encoding = 'UTF-8'
 }
 
 tasks.withType(Test).configureEach {
@@ -269,7 +370,7 @@ tasks.register('benchmarkDraconicAnnuli', JavaExec) {
     description = 'Runs the deterministic Draconic explosion annulus microbenchmark.'
     dependsOn testClasses
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.marblegate.letemburn.compat.draconic.DraconicAnnulusBenchmark'
+    mainClass = 'dev.marblegate.letemburn.integration.draconic.DraconicAnnulusBenchmark'
 }
 
 tasks.named('processGameTestResources').configure {

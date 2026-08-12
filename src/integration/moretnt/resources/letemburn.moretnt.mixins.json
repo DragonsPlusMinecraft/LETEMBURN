@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.moretnt",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BaseExplosionMixin",
+    "BaseTNTBlockMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

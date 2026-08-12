@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.mekanism",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlockCardboardBoxMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

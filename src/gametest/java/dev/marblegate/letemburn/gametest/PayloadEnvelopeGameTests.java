@@ -19,9 +19,9 @@
 package dev.marblegate.letemburn.gametest;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.core.PayloadEnvelopeDecoder;
-import dev.marblegate.letemburn.compat.core.PayloadEnvelopeResolver;
-import dev.marblegate.letemburn.compat.core.PayloadSnapshot;
+import dev.marblegate.letemburn.common.payload.PayloadEnvelopeDecoder;
+import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
+import dev.marblegate.letemburn.common.payload.PayloadSnapshot;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;

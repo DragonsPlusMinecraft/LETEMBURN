@@ -22,15 +22,15 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSingleBlockSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.core.ImpactPayloadRegistry;
-import dev.marblegate.letemburn.compat.core.ImpactStatus;
-import dev.marblegate.letemburn.compat.core.PayloadEnvelopeResolver;
-import dev.marblegate.letemburn.compat.core.ProjectedEffectContext;
-import dev.marblegate.letemburn.compat.core.ProjectedPayloadCollisionCallback;
-import dev.marblegate.letemburn.compat.moretnt.MoreTntImpactAudit;
-import dev.marblegate.letemburn.compat.moretnt.MoreTntImpactAudit.SpawnEvent;
-import dev.marblegate.letemburn.compat.moretnt.MoreTntNativeFactory;
-import dev.marblegate.letemburn.compat.moretnt.MoreTntNativeFactory.NativeTntSpec;
+import dev.marblegate.letemburn.common.impact.ImpactPayloadRegistry;
+import dev.marblegate.letemburn.common.impact.ImpactStatus;
+import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
+import dev.marblegate.letemburn.common.impact.ProjectedPayloadCollisionCallback;
+import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
+import dev.marblegate.letemburn.integration.moretnt.MoreTntImpactAudit;
+import dev.marblegate.letemburn.integration.moretnt.MoreTntImpactAudit.SpawnEvent;
+import dev.marblegate.letemburn.integration.moretnt.MoreTntNativeFactory;
+import dev.marblegate.letemburn.integration.moretnt.MoreTntNativeFactory.NativeTntSpec;
 import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;

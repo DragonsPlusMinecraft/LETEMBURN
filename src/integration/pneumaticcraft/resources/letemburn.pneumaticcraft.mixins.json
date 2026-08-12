@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.pneumaticcraft",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AbstractAirHandlingBlockEntityMixin",
+    "MachineAirHandlerMixin",
+    "PneumaticCraftEntityBlockMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

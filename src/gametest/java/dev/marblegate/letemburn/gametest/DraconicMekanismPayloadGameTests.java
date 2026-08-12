@@ -25,8 +25,8 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLeve
 import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCore;
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.core.ChainReactionCoordinator;
-import dev.marblegate.letemburn.compat.draconic.DraconicExplosionAudit;
+import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
+import dev.marblegate.letemburn.integration.draconic.DraconicExplosionAudit;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;

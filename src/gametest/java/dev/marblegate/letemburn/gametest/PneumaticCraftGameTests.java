@@ -22,11 +22,11 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.compat.core.ProjectedEffectContext;
-import dev.marblegate.letemburn.compat.pneumaticcraft.PneumaticImpactAudit;
-import dev.marblegate.letemburn.compat.pneumaticcraft.PneumaticImpactCollisionCallback;
-import dev.marblegate.letemburn.compat.pneumaticcraft.PneumaticImpactCoordinator;
-import dev.marblegate.letemburn.compat.pneumaticcraft.PneumaticImpactModel;
+import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
+import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactAudit;
+import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactCollisionCallback;
+import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactCoordinator;
+import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactModel;
 import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;

@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.ballistix",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlastMixin",
+    "BlockExplosiveMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

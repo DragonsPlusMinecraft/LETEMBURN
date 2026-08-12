@@ -18,7 +18,8 @@
 
 package dev.marblegate.letemburn.mixin.sable;
 
-import dev.marblegate.letemburn.compat.core.ProjectedPayloadCollisionCallback;
+import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
+import dev.marblegate.letemburn.common.impact.ProjectedPayloadCollisionCallback;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
 import dev.ryanhcode.sable.physics.callback.ExplosiveBlockCallback;
 import dev.ryanhcode.sable.physics.callback.FragileBlockCallback;
@@ -53,7 +54,7 @@ public abstract class ExplosiveBlockCallbackMixin {
         }
 
         // A vanilla TNT payload below its threshold is handled but intentionally remains intact.
-        var context = dev.marblegate.letemburn.compat.core.ProjectedEffectContext.fromCollision(
+        var context = ProjectedEffectContext.fromCollision(
                 blockPosition, otherBlockPosition, impactPosition, impactVelocity);
         if (context != null
                 && context.level().getBlockState(blockPosition).is(net.minecraft.world.level.block.Blocks.TNT)) {
