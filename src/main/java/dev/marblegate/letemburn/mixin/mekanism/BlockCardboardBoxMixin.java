@@ -18,7 +18,7 @@
 
 package dev.marblegate.letemburn.mixin.mekanism;
 
-import dev.marblegate.letemburn.waaoh.ReleaseBigBoom;
+import dev.marblegate.letemburn.compat.core.ProjectedPayloadCollisionCallback;
 import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
@@ -32,7 +32,6 @@ import org.spongepowered.asm.mixin.Mixin;
 
 @Restriction(require = {
         @Condition("sable"),
-        @Condition("draconicevolution"),
         @Condition("mekanism") })
 @Mixin(BlockCardboardBox.class)
 public abstract class BlockCardboardBoxMixin extends BlockMekanism implements IStateStorage, IHasTileEntity<TileEntityCardboardBox>, BlockWithSubLevelCollisionCallback {
@@ -42,6 +41,6 @@ public abstract class BlockCardboardBoxMixin extends BlockMekanism implements IS
 
     @Override
     public BlockSubLevelCollisionCallback sable$getCallback() {
-        return ReleaseBigBoom.INSTANCE;
+        return ProjectedPayloadCollisionCallback.INSTANCE;
     }
 }

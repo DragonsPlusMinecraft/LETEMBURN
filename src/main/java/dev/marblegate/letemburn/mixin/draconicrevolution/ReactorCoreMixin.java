@@ -19,7 +19,7 @@
 package dev.marblegate.letemburn.mixin.draconicrevolution;
 
 import com.brandon3055.draconicevolution.blocks.reactor.ReactorCore;
-import dev.marblegate.letemburn.waaoh.ReleaseDirectReactor;
+import dev.marblegate.letemburn.compat.core.ProjectedPayloadCollisionCallback;
 import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.callback.BlockSubLevelCollisionCallback;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
@@ -33,6 +33,6 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class ReactorCoreMixin implements BlockWithSubLevelCollisionCallback {
     @Override
     public BlockSubLevelCollisionCallback sable$getCallback() {
-        return ReleaseDirectReactor.INSTANCE;
+        return ProjectedPayloadCollisionCallback.INSTANCE;
     }
 }

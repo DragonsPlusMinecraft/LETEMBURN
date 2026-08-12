@@ -63,6 +63,11 @@ public final class ChainReactionCoordinator {
         return queue == null ? 0 : queue.pendingCount();
     }
 
+    public boolean cancel(ProjectedEffectContext context, String payloadFingerprint) {
+        DeferredEffectQueue<EffectKey> queue = queues.get(context.level());
+        return queue != null && queue.cancel(context.key(payloadFingerprint));
+    }
+
     private void postPhysicsTick(SubLevelPhysicsSystem physicsSystem, double timeStep) {
         DeferredEffectQueue<EffectKey> queue = queues.get(physicsSystem.getLevel());
         if (queue == null) {

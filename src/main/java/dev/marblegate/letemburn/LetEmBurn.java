@@ -20,6 +20,7 @@ package dev.marblegate.letemburn;
 
 import com.mojang.logging.LogUtils;
 import dev.marblegate.letemburn.compat.core.ChainReactionCoordinator;
+import dev.marblegate.letemburn.compat.core.CompatibilityBootstrap;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -33,6 +34,7 @@ public final class LetEmBurn {
 
     public LetEmBurn(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, LetEmBurnConfig.SPEC);
+        CompatibilityBootstrap.bootstrap();
         ChainReactionCoordinator.INSTANCE.register();
     }
 }

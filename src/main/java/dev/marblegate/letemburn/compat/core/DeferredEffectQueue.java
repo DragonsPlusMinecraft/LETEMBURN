@@ -71,6 +71,15 @@ public final class DeferredEffectQueue<K> {
         return pending.size();
     }
 
+    public synchronized boolean cancel(K key) {
+        PendingEffect removed = pending.remove(key);
+        if (removed != null) {
+            seenEpochs.remove(key);
+            return true;
+        }
+        return false;
+    }
+
     private void discardSeenBefore(long epoch) {
         Iterator<Map.Entry<K, Long>> iterator = seenEpochs.entrySet().iterator();
         while (iterator.hasNext()) {

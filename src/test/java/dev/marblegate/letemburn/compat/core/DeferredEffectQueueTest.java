@@ -77,4 +77,14 @@ class DeferredEffectQueueTest {
         assertEquals("commit", failure.commitFailure().getMessage());
         assertEquals("rollback", failure.rollbackFailure().getMessage());
     }
+
+    @Test
+    void cancelledReservationMayBeReservedAgain() {
+        DeferredEffectQueue<String> queue = new DeferredEffectQueue<>();
+
+        assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
+        assertTrue(queue.cancel("payload"));
+        assertEquals(0, queue.pendingCount());
+        assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
+    }
 }

@@ -19,19 +19,34 @@
 package dev.marblegate.letemburn.gametest;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 @EventBusSubscriber
 public final class GameTestRegistrar {
-    private static final String TEST_CLASS = "dev.marblegate.letemburn.gametest.LetEmBurnGameTests";
+    private static final String TEST_PACKAGE = "dev.marblegate.letemburn.gametest.";
 
     private GameTestRegistrar() {}
 
     @SubscribeEvent
     public static void registerTests(RegisterGameTestsEvent event) {
+        register(event, TEST_PACKAGE + "LetEmBurnGameTests");
+        register(event, TEST_PACKAGE + "PayloadEnvelopeGameTests");
+        if (ModList.get().isLoaded("mekanism")) {
+            register(event, TEST_PACKAGE + "MekanismPayloadGameTests");
+        }
+        if (ModList.get().isLoaded("draconicevolution")) {
+            register(event, TEST_PACKAGE + "DraconicPayloadGameTests");
+        }
+        if (ModList.get().isLoaded("mekanism") && ModList.get().isLoaded("draconicevolution")) {
+            register(event, TEST_PACKAGE + "DraconicMekanismPayloadGameTests");
+        }
+    }
+
+    private static void register(RegisterGameTestsEvent event, String className) {
         try {
-            event.register(Class.forName(TEST_CLASS, false, GameTestRegistrar.class.getClassLoader()));
+            event.register(Class.forName(className, false, GameTestRegistrar.class.getClassLoader()));
         } catch (ClassNotFoundException ignored) {
             // The dedicated GameTest source set is deliberately absent from production jars.
         }
