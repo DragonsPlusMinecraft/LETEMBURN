@@ -19,14 +19,15 @@
 package dev.marblegate.letemburn.common.payload;
 
 import dev.marblegate.letemburn.config.LetEmBurnConfig;
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -136,16 +137,15 @@ public final class PayloadEnvelopeResolver {
             root.put("block_entity", blockEntityTag);
         }
 
-        LimitedByteArrayOutputStream bytes = new LimitedByteArrayOutputStream(maxBytes);
-        try (DataOutputStream output = new DataOutputStream(bytes)) {
-            NbtIo.write(root, output);
-        }
-        byte[] serialized = bytes.toByteArray();
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update("letemburn-payload-v1".getBytes(StandardCharsets.UTF_8));
-            String fingerprint = HexFormat.of().formatHex(digest.digest(serialized));
-            return new EncodedSnapshot(serialized.length, fingerprint);
+            LimitedDigestOutputStream bytes = new LimitedDigestOutputStream(digest, maxBytes);
+            try (DataOutputStream output = new DataOutputStream(bytes)) {
+                NbtIo.write(root, output);
+            }
+            String fingerprint = HexFormat.of().formatHex(digest.digest());
+            return new EncodedSnapshot(bytes.size(), fingerprint);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available", exception);
         }
@@ -180,24 +180,33 @@ public final class PayloadEnvelopeResolver {
 
     private record EncodedSnapshot(int size, String fingerprint) {}
 
-    private static final class LimitedByteArrayOutputStream extends ByteArrayOutputStream {
+    private static final class LimitedDigestOutputStream extends OutputStream {
+        private final MessageDigest digest;
         private final int limit;
+        private int count;
 
-        private LimitedByteArrayOutputStream(int limit) {
-            super(Math.min(limit, 512));
+        private LimitedDigestOutputStream(MessageDigest digest, int limit) {
+            this.digest = digest;
             this.limit = limit;
         }
 
         @Override
-        public synchronized void write(int value) {
+        public void write(int value) {
             ensureCapacityFor(1);
-            super.write(value);
+            digest.update((byte) value);
+            count++;
         }
 
         @Override
-        public synchronized void write(byte[] bytes, int offset, int length) {
+        public void write(byte[] bytes, int offset, int length) {
+            Objects.checkFromIndexSize(offset, length, bytes.length);
             ensureCapacityFor(length);
-            super.write(bytes, offset, length);
+            digest.update(bytes, offset, length);
+            count += length;
+        }
+
+        private int size() {
+            return count;
         }
 
         private void ensureCapacityFor(int additionalBytes) {

@@ -22,10 +22,19 @@ import dev.marblegate.letemburn.LetEmBurn;
 import dev.marblegate.letemburn.common.payload.PayloadEnvelopeDecoder;
 import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
 import dev.marblegate.letemburn.common.payload.PayloadSnapshot;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -109,6 +118,43 @@ public final class PayloadEnvelopeGameTests {
         helper.succeed();
     }
 
+    @GameTest(template = "bootstrap", timeoutTicks = 20)
+    public static void streamingFingerprintMatchesLegacyEncoding(GameTestHelper helper) {
+        CompoundTag source = new CompoundTag();
+        source.putString("name", "streamed payload");
+        source.putByteArray("data", new byte[2_048]);
+        LegacyEncoding legacy = legacyEncode(Blocks.TNT.defaultBlockState(), source);
+
+        PayloadEnvelopeResolver.Resolution streamed = PayloadEnvelopeResolver.INSTANCE.resolve(
+                Blocks.TNT.defaultBlockState(),
+                source,
+                helper.getLevel().registryAccess(),
+                8,
+                legacy.size());
+        PayloadEnvelopeResolver.Resolution oneByteTooSmall = PayloadEnvelopeResolver.INSTANCE.resolve(
+                Blocks.TNT.defaultBlockState(),
+                source,
+                helper.getLevel().registryAccess(),
+                8,
+                legacy.size() - 1);
+
+        require(streamed.valid(), helper, "Payload exactly at the byte limit was rejected");
+        require(
+                streamed.snapshot().serializedBytes() == legacy.size(),
+                helper,
+                "Streaming payload size differs from the legacy encoding");
+        require(
+                streamed.snapshot().fingerprint().equals(legacy.fingerprint()),
+                helper,
+                "Streaming payload fingerprint differs from the legacy encoding");
+        require(
+                !oneByteTooSmall.valid()
+                        && oneByteTooSmall.failure() == PayloadEnvelopeResolver.Failure.TOO_LARGE,
+                helper,
+                "Payload exceeding the byte limit by one did not fail closed");
+        helper.succeed();
+    }
+
     private static CompoundTag countingTag(int remaining) {
         CompoundTag tag = new CompoundTag();
         tag.putInt("remaining", remaining);
@@ -120,6 +166,32 @@ public final class PayloadEnvelopeGameTests {
             helper.fail(message);
         }
     }
+
+    private static LegacyEncoding legacyEncode(
+            BlockState state, @Nullable CompoundTag blockEntityTag) {
+        CompoundTag root = new CompoundTag();
+        root.put("state", NbtUtils.writeBlockState(state));
+        if (blockEntityTag != null) {
+            root.put("block_entity", blockEntityTag);
+        }
+
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            try (DataOutputStream output = new DataOutputStream(bytes)) {
+                NbtIo.write(root, output);
+            }
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update("letemburn-payload-v1".getBytes(StandardCharsets.UTF_8));
+            byte[] serialized = bytes.toByteArray();
+            return new LegacyEncoding(
+                    serialized.length,
+                    HexFormat.of().formatHex(digest.digest(serialized)));
+        } catch (IOException | NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("Failed to produce legacy payload encoding", exception);
+        }
+    }
+
+    private record LegacyEncoding(int size, String fingerprint) {}
 
     private enum CountingEnvelopeDecoder implements PayloadEnvelopeDecoder {
         INSTANCE;
