@@ -33,7 +33,9 @@ import dev.marblegate.letemburn.common.impact.ImpactPayloadAdapter;
 import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
 import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
 import dev.marblegate.letemburn.gametest.draconic.DraconicExplosionScheduleAudit;
+import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusMode;
 import dev.marblegate.letemburn.integration.draconic.DraconicReactorImpactAdapter;
+import dev.marblegate.letemburn.integration.draconic.ProcessExplosionAlgorithmAccess;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
@@ -54,21 +56,34 @@ public final class DraconicPayloadGameTests {
     private DraconicPayloadGameTests() {}
 
     @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 20)
-    public static void sparseAnnulusMixinExecutesWithoutDetonating(GameTestHelper helper) {
+    public static void radiusSelectedAnnulusMixinExecutesWithoutDetonating(GameTestHelper helper) {
         Vector3d absoluteOrigin = absolutePosition(helper, new Vector3d(5.5D, 20.0D, 5.5D));
         BlockPos origin = BlockPos.containing(absoluteOrigin.x, absoluteOrigin.y, absoluteOrigin.z);
         ProcessExplosion calculation = new ProcessExplosion(origin, 5, helper.getLevel(), -1);
+        ProcessExplosionAlgorithmAccess small = (ProcessExplosionAlgorithmAccess) calculation;
+        ProcessExplosion belowBoundaryExplosion = new ProcessExplosion(origin, 256, helper.getLevel(), -1);
+        belowBoundaryExplosion.radius = 255;
+        ProcessExplosionAlgorithmAccess belowBoundary = (ProcessExplosionAlgorithmAccess) belowBoundaryExplosion;
+        ProcessExplosion atBoundaryExplosion = new ProcessExplosion(origin, 256, helper.getLevel(), -1);
+        atBoundaryExplosion.radius = 256;
+        ProcessExplosionAlgorithmAccess atBoundary = (ProcessExplosionAlgorithmAccess) atBoundaryExplosion;
+        if (small.letemburn$getAnnulusMode() != DraconicAnnulusMode.A0
+                || belowBoundary.letemburn$getAnnulusMode() != DraconicAnnulusMode.A0
+                || atBoundary.letemburn$getAnnulusMode() != DraconicAnnulusMode.A1) {
+            helper.fail("Production annulus scan did not select A0/A1 at the radius 256 boundary");
+            return;
+        }
         calculation.enableEffect = false;
         for (int step = 0; step < 5; step++) {
             calculation.updateCalculation();
         }
 
         if (!calculation.isCalculationComplete() || calculation.radius != 5) {
-            helper.fail("Sparse annulus calculation did not reach the expected safe radius");
+            helper.fail("Radius-selected annulus calculation did not reach the expected safe radius");
             return;
         }
         if (calculation.destroyedBlocks.size() != 5) {
-            helper.fail("Sparse annulus calculation changed the number of staged radius layers");
+            helper.fail("Radius-selected annulus calculation changed the number of staged radius layers");
             return;
         }
         helper.succeed();

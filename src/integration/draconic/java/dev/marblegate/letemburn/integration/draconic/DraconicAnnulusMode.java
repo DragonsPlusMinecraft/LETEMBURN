@@ -20,7 +20,7 @@ package dev.marblegate.letemburn.integration.draconic;
 
 import org.jetbrains.annotations.ApiStatus;
 
-/** Internal selectors used by the real explosion equivalence GameTest; production defaults to A1. */
+/** Internal selectors used by the real explosion equivalence GameTest; production selects by radius. */
 @ApiStatus.Internal
 public enum DraconicAnnulusMode {
     LEGACY,

@@ -123,8 +123,9 @@ public final class DraconicExplosionEquivalenceGameTests {
         ProcessExplosion explosion = new ProcessExplosion(origin, radius, level, -1);
         ProcessExplosionAlgorithmAccess algorithm = (ProcessExplosionAlgorithmAccess) explosion;
         if (mode == RunMode.PRODUCTION) {
-            if (algorithm.letemburn$getAnnulusMode() != DraconicAnnulusMode.A1) {
-                throw new IllegalStateException("Production ProcessExplosion did not default to A1");
+            DraconicAnnulusMode expected = radius < 256 ? DraconicAnnulusMode.A0 : DraconicAnnulusMode.A1;
+            if (algorithm.letemburn$getAnnulusMode() != expected) {
+                throw new IllegalStateException("Production ProcessExplosion selected the wrong annulus mode");
             }
         } else {
             algorithm.letemburn$setAnnulusMode(switch (mode) {
@@ -206,7 +207,7 @@ public final class DraconicExplosionEquivalenceGameTests {
             Map<RunMode, RunResult> results) {
         RunResult legacy = requireResult(helper, results, RunMode.LEGACY);
         RunResult production = requireResult(helper, results, RunMode.PRODUCTION);
-        requireEquivalent(helper, radius, legacy, production, "production A1");
+        requireEquivalent(helper, radius, legacy, production, "production radius-selected mode");
         requireEquivalent(
                 helper,
                 radius,

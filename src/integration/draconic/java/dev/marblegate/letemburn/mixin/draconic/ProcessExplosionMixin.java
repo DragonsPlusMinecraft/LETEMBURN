@@ -44,6 +44,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = ProcessExplosion.class, remap = false)
 public abstract class ProcessExplosionMixin implements ProcessExplosionAlgorithmAccess {
     @Unique
+    private static final int letemburn$SPARSE_SCAN_MIN_RADIUS = 256;
+
+    @Unique
     private int letemburn$annulusCentreZ;
 
     @Unique
@@ -104,6 +107,11 @@ public abstract class ProcessExplosionMixin implements ProcessExplosionAlgorithm
 
     @Override
     public DraconicAnnulusMode letemburn$getAnnulusMode() {
-        return letemburn$annulusMode == null ? DraconicAnnulusMode.A1 : letemburn$annulusMode;
+        if (letemburn$annulusMode != null) {
+            return letemburn$annulusMode;
+        }
+        return radius < letemburn$SPARSE_SCAN_MIN_RADIUS
+                ? DraconicAnnulusMode.A0
+                : DraconicAnnulusMode.A1;
     }
 }
