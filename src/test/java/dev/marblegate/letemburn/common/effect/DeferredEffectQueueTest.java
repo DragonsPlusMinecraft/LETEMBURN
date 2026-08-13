@@ -100,4 +100,27 @@ class DeferredEffectQueueTest {
 
         assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
     }
+
+    @Test
+    void rollsBackAllPendingEffectsOnceAndContinuesAfterFailure() {
+        DeferredEffectQueue<String> queue = new DeferredEffectQueue<>();
+        List<String> rollbacks = new ArrayList<>();
+        queue.reserve(9, "first", marker -> {}, () -> rollbacks.add("first"));
+        queue.reserve(9, "broken", marker -> {}, () -> {
+            rollbacks.add("broken");
+            throw new IllegalStateException("rollback failed");
+        });
+        queue.reserve(9, "last", marker -> {}, () -> rollbacks.add("last"));
+
+        List<DeferredEffectQueue.RollbackFailure<String>> failures = queue.rollbackPending();
+
+        assertEquals(List.of("first", "broken", "last"), rollbacks);
+        assertEquals(1, failures.size());
+        assertEquals("broken", failures.getFirst().key());
+        assertEquals("rollback failed", failures.getFirst().cause().getMessage());
+        assertEquals(0, queue.pendingCount());
+        assertTrue(queue.rollbackPending().isEmpty());
+        assertEquals(List.of("first", "broken", "last"), rollbacks);
+        assertTrue(queue.reserve(9, "first", marker -> {}, () -> {}));
+    }
 }

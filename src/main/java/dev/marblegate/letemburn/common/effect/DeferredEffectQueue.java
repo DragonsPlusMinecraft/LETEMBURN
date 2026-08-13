@@ -75,6 +75,21 @@ public final class DeferredEffectQueue<K> {
         seenEpochs.keySet().removeIf(key -> !pending.containsKey(key));
     }
 
+    synchronized List<RollbackFailure<K>> rollbackPending() {
+        List<Map.Entry<K, PendingEffect>> snapshot = new ArrayList<>(pending.entrySet());
+        pending.clear();
+        seenEpochs.clear();
+        List<RollbackFailure<K>> failures = new ArrayList<>();
+        for (Map.Entry<K, PendingEffect> entry : snapshot) {
+            try {
+                entry.getValue().rollback().run();
+            } catch (RuntimeException failure) {
+                failures.add(new RollbackFailure<>(entry.getKey(), failure));
+            }
+        }
+        return List.copyOf(failures);
+    }
+
     public synchronized boolean cancel(K key) {
         PendingEffect removed = pending.remove(key);
         if (removed != null) {
@@ -98,4 +113,6 @@ public final class DeferredEffectQueue<K> {
 
     public record Failure<K>(
             K key, Exception commitFailure, boolean rollbackAttempted, Exception rollbackFailure) {}
+
+    record RollbackFailure<K>(K key, RuntimeException cause) {}
 }

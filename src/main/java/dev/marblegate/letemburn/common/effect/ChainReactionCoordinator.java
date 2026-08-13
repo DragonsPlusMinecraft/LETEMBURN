@@ -110,7 +110,17 @@ public final class ChainReactionCoordinator {
 
     private void levelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel level) {
-            queues.remove(level);
+            DeferredEffectQueue<EffectKey> queue = queues.remove(level);
+            if (queue == null) {
+                return;
+            }
+            for (DeferredEffectQueue.RollbackFailure<EffectKey> failure : queue.rollbackPending()) {
+                LetEmBurn.LOGGER.error(
+                        "Failed to restore projected payload {} while unloading {}",
+                        failure.key(),
+                        level.dimension().location(),
+                        failure.cause());
+            }
         }
     }
 }
