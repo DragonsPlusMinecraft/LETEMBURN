@@ -57,7 +57,10 @@ public abstract class ExplosiveBlockCallbackMixin {
         var context = ProjectedEffectContext.fromCollision(
                 blockPosition, otherBlockPosition, impactPosition, impactVelocity);
         if (context != null
-                && context.level().getBlockState(blockPosition).is(net.minecraft.world.level.block.Blocks.TNT)) {
+                && context.subLevel()
+                        .getLevel()
+                        .getBlockState(blockPosition)
+                        .is(net.minecraft.world.level.block.Blocks.TNT)) {
             callback.setReturnValue(BlockSubLevelCollisionCallback.CollisionResult.NONE);
         }
     }

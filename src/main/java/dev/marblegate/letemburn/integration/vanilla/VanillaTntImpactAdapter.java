@@ -39,6 +39,10 @@ public final class VanillaTntImpactAdapter implements ImpactPayloadAdapter {
             return Probe.notHandled();
         }
         if (context.impactVelocity() * context.impactVelocity() < IMPACT_SPEED * IMPACT_SPEED) {
+            if (GameTestHooks.isGametestServer()) {
+                VanillaTntImpactAudit.recordBelowThreshold(
+                        context.globalImpactPosition(), context.impactVelocity(), payload.envelopeDepth());
+            }
             return Probe.belowThreshold("minecraft-tnt");
         }
         return Probe.ready("minecraft-tnt", null);
@@ -67,7 +71,11 @@ public final class VanillaTntImpactAdapter implements ImpactPayloadAdapter {
         }
         marker.markNativeEffectStarted();
         if (GameTestHooks.isGametestServer()) {
-            VanillaTntImpactAudit.record(spawnPosition, context.globalImpactPosition());
+            VanillaTntImpactAudit.recordSpawn(
+                    spawnPosition,
+                    context.globalImpactPosition(),
+                    primedTnt.getFuse(),
+                    payload.envelopeDepth());
         }
     }
 }

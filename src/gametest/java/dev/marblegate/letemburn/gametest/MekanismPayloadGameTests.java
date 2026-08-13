@@ -18,6 +18,7 @@
 
 package dev.marblegate.letemburn.gametest;
 
+import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absoluteDirection;
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosition;
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPosition;
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
@@ -103,19 +104,64 @@ public final class MekanismPayloadGameTests {
                             });
                 })
                 .thenExecute(() -> {
-                    int nativeSpawns = VanillaTntImpactAudit.spawnsWithin(helper.getBounds());
-                    if (nativeSpawns != 1) {
+                    var spawnEvents = VanillaTntImpactAudit.spawnEventsWithin(helper.getBounds());
+                    if (spawnEvents.size() != 1
+                            || spawnEvents.getFirst().initialFuse() != 4
+                            || spawnEvents.getFirst().envelopeDepth() != 2
+                            || !observedNativeTnt.get()) {
                         Vector3d local = localPosition(helper, subLevel.logicalPose().position());
-                        helper.fail(("Nested cardboard TNT created %d native PrimedTnt entities; "
+                        helper.fail(("Nested cardboard TNT did not create exactly one native PrimedTnt "
+                                + "with an initial 4 tick fuse; events=%s, "
                                 + "observed=%s, body=%s, payload=%s, lastSpawn=%s, pending=%d")
                                         .formatted(
-                                                nativeSpawns,
+                                                spawnEvents,
                                                 observedNativeTnt.get(),
                                                 local,
                                                 subLevel.getLevel()
                                                         .getBlockState(subLevel.getPlot().getCenterBlock()),
                                                 VanillaTntImpactAudit.lastSpawnPosition(),
                                                 ChainReactionCoordinator.INSTANCE.pendingCount(helper.getLevel())));
+                    }
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 100)
+    public static void cardboardTntSurvivesBelowThresholdCollision(GameTestHelper helper) {
+        ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
+        SubLevelPhysicsSystem physicsSystem = LetEmBurnGameTests.requirePhysics(container);
+        LetEmBurnGameTests.addWall(helper, 3);
+        VanillaTntImpactAudit.clearWithin(helper.getBounds());
+        HolderLookup.Provider registries = helper.getLevel().registryAccess();
+        BlockData content = nestedContent(
+                registries, 2, new BlockData(Blocks.TNT.defaultBlockState(), null));
+        ServerSubLevel subLevel = spawnSubLevel(
+                container,
+                absolutePosition(helper, new Vector3d(2.5D, 4.0D, 2.25D)),
+                accessor -> placeCardboardBox(accessor, content));
+        RigidBodyHandle handle = physicsSystem.getPhysicsHandle(subLevel);
+        BlockPos payloadPosition = subLevel.getPlot().getCenterBlock();
+
+        helper.startSequence()
+                .thenIdle(2)
+                .thenExecute(() -> LetEmBurnGameTests.maintainVelocity(
+                        handle,
+                        subLevel,
+                        absoluteDirection(helper, new Vector3d(0.0D, 0.0D, 3.0D))))
+                .thenIdle(12)
+                .thenExecute(() -> {
+                    var belowThreshold = VanillaTntImpactAudit.belowThresholdEventsWithin(helper.getBounds());
+                    if (belowThreshold.isEmpty()
+                            || belowThreshold.stream().anyMatch(event -> event.envelopeDepth() != 2)
+                            || VanillaTntImpactAudit.spawnsWithin(helper.getBounds()) != 0) {
+                        helper.fail("Cardboard TNT did not record only below-threshold collisions: "
+                                + belowThreshold);
+                    }
+                    if (!subLevel
+                            .getLevel()
+                            .getBlockState(payloadPosition)
+                            .is(MekanismBlocks.CARDBOARD_BOX.get())) {
+                        helper.fail("Below-threshold cardboard TNT collision consumed the outer payload");
                     }
                 })
                 .thenSucceed();

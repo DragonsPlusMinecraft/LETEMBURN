@@ -18,44 +18,62 @@
 
 package dev.marblegate.letemburn.integration.vanilla;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import net.minecraft.core.BlockPos;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 public final class VanillaTntImpactAudit {
-    private static final Map<BlockPos, AtomicInteger> SPAWNS = new ConcurrentHashMap<>();
-    private static final Map<BlockPos, AtomicInteger> SOURCES = new ConcurrentHashMap<>();
+    private static final ConcurrentLinkedQueue<SpawnEvent> SPAWNS = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<BelowThresholdEvent> BELOW_THRESHOLD = new ConcurrentLinkedQueue<>();
     private static volatile @Nullable Vec3 lastSpawnPosition;
 
     private VanillaTntImpactAudit() {}
 
-    static void record(Vec3 position, Vec3 sourcePosition) {
+    static void recordSpawn(
+            Vec3 position, Vec3 sourcePosition, int initialFuse, int envelopeDepth) {
         lastSpawnPosition = position;
-        SPAWNS.computeIfAbsent(BlockPos.containing(position), ignored -> new AtomicInteger())
-                .incrementAndGet();
-        SOURCES.computeIfAbsent(BlockPos.containing(sourcePosition), ignored -> new AtomicInteger())
-                .incrementAndGet();
+        SPAWNS.add(new SpawnEvent(position, sourcePosition, initialFuse, envelopeDepth));
+    }
+
+    static void recordBelowThreshold(Vec3 position, double impactVelocity, int envelopeDepth) {
+        BELOW_THRESHOLD.add(new BelowThresholdEvent(position, impactVelocity, envelopeDepth));
     }
 
     public static int spawnsWithin(AABB bounds) {
         AABB toleranceBounds = bounds.inflate(2.0D);
-        return SPAWNS.entrySet().stream()
-                .filter(entry -> toleranceBounds.contains(entry.getKey().getCenter()))
-                .mapToInt(entry -> entry.getValue().get())
-                .sum();
+        return (int) SPAWNS.stream()
+                .filter(event -> toleranceBounds.contains(event.position()))
+                .count();
+    }
+
+    public static List<SpawnEvent> spawnEventsWithin(AABB bounds) {
+        AABB toleranceBounds = bounds.inflate(2.0D);
+        return SPAWNS.stream()
+                .filter(event -> toleranceBounds.contains(event.position()))
+                .toList();
+    }
+
+    public static List<BelowThresholdEvent> belowThresholdEventsWithin(AABB bounds) {
+        AABB toleranceBounds = bounds.inflate(2.0D);
+        return BELOW_THRESHOLD.stream()
+                .filter(event -> toleranceBounds.contains(event.position()))
+                .toList();
     }
 
     public static void clearWithin(AABB bounds) {
         AABB toleranceBounds = bounds.inflate(2.0D);
-        SPAWNS.keySet().removeIf(position -> toleranceBounds.contains(position.getCenter()));
-        SOURCES.keySet().removeIf(position -> toleranceBounds.contains(position.getCenter()));
+        SPAWNS.removeIf(event -> toleranceBounds.contains(event.position()));
+        BELOW_THRESHOLD.removeIf(event -> toleranceBounds.contains(event.position()));
     }
 
     public static @Nullable Vec3 lastSpawnPosition() {
         return lastSpawnPosition;
     }
+
+    public record SpawnEvent(
+            Vec3 position, Vec3 sourcePosition, int initialFuse, int envelopeDepth) {}
+
+    public record BelowThresholdEvent(Vec3 position, double impactVelocity, int envelopeDepth) {}
 }
