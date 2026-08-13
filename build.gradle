@@ -216,9 +216,33 @@ neoForge {
         minecraftVersion = project.parchment_minecraft_version
     }
 
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            integrations.each { name, ignored ->
+                sourceSet(sourceSets[name])
+            }
+        }
+        "${mod_id}_gametest" {
+            sourceSet(sourceSets.gameTest)
+        }
+    }
+
     runs {
         client {
             client()
+            loadedMods = [mods.getByName(project.mod_id)]
+            systemProperty 'neoforge.enableGameTest', 'false'
+        }
+
+        clientGameTest {
+            client()
+            gameDirectory = layout.projectDirectory.dir("run/client-gametest/${gameTestRuntimeId}/${gameTestRunId}")
+            sourceSet = sourceSets.gameTest
+            loadedMods = [
+                    mods.getByName(project.mod_id),
+                    mods.getByName("${project.mod_id}_gametest")
+            ]
             programArguments.addAll '--mixin.config', "${mod_id}.gametest.mixins.json"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -226,12 +250,17 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            loadedMods = [mods.getByName(project.mod_id)]
         }
 
         gameTestServer {
             type = 'gameTestServer'
             gameDirectory = layout.projectDirectory.dir("run/gametest/${gameTestRuntimeId}/${gameTestRunId}")
+            sourceSet = sourceSets.gameTest
+            loadedMods = [
+                    mods.getByName(project.mod_id),
+                    mods.getByName("${project.mod_id}_gametest")
+            ]
             programArguments.addAll '--mixin.config', "${mod_id}.gametest.mixins.json"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -243,21 +272,12 @@ neoForge {
                     '--output', file('src/generated/resources/').getAbsolutePath(),
                     '--existing', file('src/main/resources/').getAbsolutePath(),
                     '--existing-mod', 'create'
+            loadedMods = [mods.getByName(project.mod_id)]
         }
 
         configureEach {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             logLevel = org.slf4j.event.Level.DEBUG
-        }
-    }
-
-    mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
-            integrations.each { name, ignored ->
-                sourceSet(sourceSets[name])
-            }
-            sourceSet(sourceSets.gameTest)
         }
     }
 }

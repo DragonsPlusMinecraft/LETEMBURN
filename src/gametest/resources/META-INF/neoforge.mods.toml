@@ -1,0 +1,16 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="LGPL-3.0-or-later"
+
+[[mods]]
+modId="letemburn_gametest"
+version="1"
+displayName="LET!EM!BURN! GameTest Support"
+description='''Development-only automated test registration and instrumentation.'''
+
+[[dependencies."letemburn_gametest"]]
+    modId="letemburn"
+    type="required"
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
