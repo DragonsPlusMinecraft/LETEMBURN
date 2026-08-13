@@ -150,24 +150,26 @@ public final class NuclearSciencePlasmaGameTests {
         BlockPos rootPosition = subLevel.getPlot().getCenterBlock();
         BlockPos exitPosition = rootPosition.east(2);
         UUID subLevelId = subLevel.getUniqueId();
+        BlockPos originalProjectedExit = BlockPos.containing(
+                Sable.HELPER.projectOutOfSubLevel(helper.getLevel(), Vec3.atCenterOf(exitPosition)));
         AtomicReference<BlockPos> expectedAfterTeleport = new AtomicReference<>();
 
         helper.startSequence()
-                .thenWaitUntil(() -> requireCount(helper, subLevelId, Kind.CANDIDATE_REGISTERED, 1L))
+                .thenIdle(1)
                 .thenExecute(() -> handle.teleport(
                         absolutePosition(helper, new Vector3d(17.5D, 104.5D, 13.5D)),
                         new Quaterniond().rotateY(Math.PI / 2.0D)))
                 .thenIdle(1)
                 .thenExecute(() -> expectedAfterTeleport.set(BlockPos.containing(
                         Sable.HELPER.projectOutOfSubLevel(helper.getLevel(), Vec3.atCenterOf(exitPosition)))))
+                .thenWaitUntil(() -> requireCount(helper, subLevelId, Kind.CANDIDATE_REGISTERED, 1L))
                 .thenWaitUntil(() -> requireCount(helper, subLevelId, Kind.PARENT_SEED_CREATED, 1L))
                 .thenIdle(2)
                 .thenExecute(() -> {
-                    Event registered = singleEvent(helper, subLevelId, Kind.CANDIDATE_REGISTERED);
                     Event created = singleEvent(helper, subLevelId, Kind.PARENT_SEED_CREATED);
                     BlockPos actualSeedPosition = BlockPos.containing(created.globalPosition());
-                    if (actualSeedPosition.equals(BlockPos.containing(registered.globalPosition()))) {
-                        helper.fail("Escaped plasma used its registration pose instead of the later moved pose");
+                    if (actualSeedPosition.equals(originalProjectedExit)) {
+                        helper.fail("Escaped plasma used the structure's original pose after it moved");
                     }
                     BlockPos expected = expectedAfterTeleport.get();
                     if (expected == null || !actualSeedPosition.equals(expected)) {
@@ -199,6 +201,56 @@ public final class NuclearSciencePlasmaGameTests {
                     if (NuclearPlasmaProjectionAudit.count(subLevelId, Kind.ESCAPE_QUEUED) != 1L
                             || NuclearPlasmaProjectionAudit.count(subLevelId, Kind.PARENT_SEED_CREATED) != 1L) {
                         helper.fail("A single moving plasma escape was projected more than once");
+                    }
+                    NuclearPlasmaProjectionAudit.endCapture();
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(batch = "letemburn_ns_plasma_first_viable", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 80)
+    public static void protectedFirstEscapeFallsThroughToNextNativeExit(GameTestHelper helper) {
+        ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
+        NuclearPlasmaProjectionAudit.beginCapture();
+        ServerSubLevel subLevel = spawnSubLevel(
+                container,
+                absolutePosition(helper, new Vector3d(5.5D, 136.5D, 5.5D)),
+                NuclearSciencePlasmaGameTests::placeTwoExitChamber);
+        BlockPos rootPosition = subLevel.getPlot().getCenterBlock();
+        BlockPos firstExit = rootPosition.east(2);
+        BlockPos secondExit = rootPosition.west(3);
+        UUID subLevelId = subLevel.getUniqueId();
+        BlockPos protectedParentTarget = BlockPos.containing(
+                Sable.HELPER.projectOutOfSubLevel(helper.getLevel(), Vec3.atCenterOf(firstExit)));
+        BlockPos viableParentTarget = BlockPos.containing(
+                Sable.HELPER.projectOutOfSubLevel(helper.getLevel(), Vec3.atCenterOf(secondExit)));
+        helper.getLevel().setBlock(protectedParentTarget, Blocks.BEDROCK.defaultBlockState(), 3);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> requireCount(helper, subLevelId, Kind.PARENT_SEED_CREATED, 1L))
+                .thenIdle(3)
+                .thenExecute(() -> {
+                    List<Event> candidates = NuclearPlasmaProjectionAudit.events().stream()
+                            .filter(event -> event.subLevelId().equals(subLevelId)
+                                    && event.kind() == Kind.CANDIDATE_REGISTERED)
+                            .toList();
+                    if (candidates.size() != 2
+                            || !candidates.get(0).exitPosition().equals(firstExit)
+                            || !candidates.get(1).exitPosition().equals(secondExit)) {
+                        helper.fail("Plasma exits were not attempted in native write order: " + candidates);
+                    }
+                    if (!helper.getLevel().getBlockState(protectedParentTarget).is(Blocks.BEDROCK)) {
+                        helper.fail("The protected first projected plasma target was overwritten");
+                    }
+                    Event created = singleEvent(helper, subLevelId, Kind.PARENT_SEED_CREATED);
+                    if (!created.exitPosition().equals(secondExit)
+                            || !BlockPos.containing(created.globalPosition()).equals(viableParentTarget)
+                            || created.remainingSpread() != 3) {
+                        helper.fail("Plasma did not use the first viable native exit: " + created);
+                    }
+                    if (NuclearPlasmaProjectionAudit.count(subLevelId, Kind.ESCAPE_QUEUED) != 2L
+                            || NuclearPlasmaProjectionAudit.count(
+                                    subLevelId, Kind.PARENT_TARGET_PROTECTED) != 1L) {
+                        helper.fail("Protected and viable plasma exits were not each processed once");
                     }
                     NuclearPlasmaProjectionAudit.endCapture();
                 })
@@ -345,6 +397,25 @@ public final class NuclearSciencePlasmaGameTests {
                             || Math.abs(y) == radius
                             || Math.abs(z) == radius;
                     boolean opening = open && x == radius && y == 0 && z == 0;
+                    if (boundary && !opening) {
+                        accessor.setBlock(new BlockPos(x, y, z), containment.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        accessor.setBlock(BlockPos.ZERO, NuclearScienceBlocks.BLOCK_PLASMA.get().defaultBlockState(), 3);
+    }
+
+    private static void placeTwoExitChamber(CommonLevelAccessor accessor) {
+        Block containment = electromagneticGlass();
+        for (int x = -2; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    boolean boundary = x == -2
+                            || x == 1
+                            || Math.abs(y) == 1
+                            || Math.abs(z) == 1;
+                    boolean opening = y == 0 && z == 0 && (x == -2 || x == 1);
                     if (boundary && !opening) {
                         accessor.setBlock(new BlockPos(x, y, z), containment.defaultBlockState(), 3);
                     }

@@ -24,18 +24,14 @@ import dev.marblegate.letemburn.common.effect.TransactionalEffect;
 import dev.marblegate.letemburn.common.impact.ImpactStatus;
 import dev.marblegate.letemburn.integration.nuclearscience.NuclearPlasmaProjectionAudit.Kind;
 import dev.ryanhcode.sable.Sable;
+import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -58,7 +54,9 @@ public final class NuclearPlasmaProjection {
 
     public static void observeNativeTickStart(TilePlasma plasma) {
         Projection projection = projection(plasma);
-        if (projection == null || plasma.ticksExisted.getValue() != 0) {
+        if (projection == null
+                || plasma.ticksExisted.getValue() != 0
+                || plasma.spread.getValue() <= 0) {
             return;
         }
         synchronized (CLOUDS) {
@@ -66,36 +64,16 @@ public final class NuclearPlasmaProjection {
                 return;
             }
         }
-        int spreadBudget = Math.clamp(plasma.spread.getValue(), 0, MAX_NATIVE_SPREAD);
-        BoundingBox3ic bounds = projection.subLevel().getPlot().getBoundingBox();
         long gameTime = projection.level().getGameTime();
-        EscapePath path = spreadBudget == 0
-                ? null
-                : findEscapePath(projection.level(), plasma, bounds, spreadBudget);
-        EscapeCandidate candidate = path == null
-                ? null
-                : new EscapeCandidate(
-                        plasma.getBlockPos().immutable(),
-                        path.exitPosition(),
-                        spreadBudget - path.distance(),
-                        gameTime);
-        PlasmaCloud cloud = new PlasmaCloud(candidate);
+        PlasmaCloud cloud = new PlasmaCloud(
+                plasma.getBlockPos(),
+                projection.subLevel().getPlot().getBoundingBox(),
+                gameTime);
         synchronized (CLOUDS) {
             PlasmaCloud inherited = CLOUDS.putIfAbsent(plasma, cloud);
             if (inherited != null) {
                 return;
             }
-        }
-        if (candidate != null) {
-            Vec3 projectedExit = project(projection.level(), path.exitPosition());
-            NuclearPlasmaProjectionAudit.record(
-                    Kind.CANDIDATE_REGISTERED,
-                    projection.subLevel().getUniqueId(),
-                    candidate.rootPosition(),
-                    path.exitPosition(),
-                    projectedExit,
-                    candidate.remainingSpread(),
-                    gameTime);
         }
     }
 
@@ -121,18 +99,30 @@ public final class NuclearPlasmaProjection {
                 CLOUDS.putIfAbsent(child, cloud);
             }
         }
-        if (cloud == null || child == null) {
-            return;
-        }
-        EscapeCandidate candidate = cloud.tryEscape(
-                position, Math.clamp(source.spread.getValue() - 1, 0, MAX_NATIVE_SPREAD));
-        if (candidate == null) {
+        if (cloud == null
+                || child == null
+                || cloud.hasEscaped()
+                || outside(cloud.initialBounds(), source.getBlockPos())
+                || !outside(cloud.initialBounds(), position)) {
             return;
         }
 
         long gameTime = projection.level().getGameTime();
         Vec3 globalPosition = project(projection.level(), position);
         BlockPos globalBlockPosition = BlockPos.containing(globalPosition);
+        EscapeCandidate candidate = new EscapeCandidate(
+                cloud.rootPosition(),
+                position,
+                Math.clamp(source.spread.getValue() - 1, 0, MAX_NATIVE_SPREAD),
+                cloud.registeredGameTime());
+        NuclearPlasmaProjectionAudit.record(
+                Kind.CANDIDATE_REGISTERED,
+                projection.subLevel().getUniqueId(),
+                candidate.rootPosition(),
+                position,
+                globalPosition,
+                candidate.remainingSpread(),
+                gameTime);
         EffectKey effectKey = new EffectKey(
                 projection.level().dimension(),
                 projection.subLevel().getUniqueId(),
@@ -149,6 +139,7 @@ public final class NuclearPlasmaProjection {
                 marker -> createNativeParentSeed(
                         projection.level(),
                         projection.subLevel().getUniqueId(),
+                        cloud,
                         candidate,
                         position,
                         globalBlockPosition,
@@ -179,89 +170,73 @@ public final class NuclearPlasmaProjection {
     private static void createNativeParentSeed(
             ServerLevel level,
             UUID subLevelId,
+            PlasmaCloud cloud,
             EscapeCandidate candidate,
             BlockPos localExitPosition,
             BlockPos globalBlockPosition,
             Vec3 globalPosition,
             long gameTime,
             TransactionalEffect.CommitMarker marker) {
-        BlockState existingState = level.getBlockState(globalBlockPosition);
-        if (existingState.is(NuclearScienceBlocks.BLOCK_PLASMA.get())) {
+        synchronized (cloud) {
+            if (cloud.escaped) {
+                NuclearPlasmaProjectionAudit.record(
+                        Kind.DUPLICATE_SUPPRESSED,
+                        subLevelId,
+                        candidate.rootPosition(),
+                        localExitPosition,
+                        globalPosition,
+                        candidate.remainingSpread(),
+                        gameTime);
+                return;
+            }
+            BlockState existingState = level.getBlockState(globalBlockPosition);
+            if (existingState.is(NuclearScienceBlocks.BLOCK_PLASMA.get())) {
+                cloud.escaped = true;
+                NuclearPlasmaProjectionAudit.record(
+                        Kind.DUPLICATE_SUPPRESSED,
+                        subLevelId,
+                        candidate.rootPosition(),
+                        localExitPosition,
+                        globalPosition,
+                        candidate.remainingSpread(),
+                        gameTime);
+                return;
+            }
+            if (!canNativePlasmaOccupy(level, globalBlockPosition, existingState)) {
+                NuclearPlasmaProjectionAudit.record(
+                        Kind.PARENT_TARGET_PROTECTED,
+                        subLevelId,
+                        candidate.rootPosition(),
+                        localExitPosition,
+                        globalPosition,
+                        candidate.remainingSpread(),
+                        gameTime);
+                return;
+            }
+
+            BlockState plasmaState = NuclearScienceBlocks.BLOCK_PLASMA.get().defaultBlockState();
+            if (!level.setBlockAndUpdate(globalBlockPosition, plasmaState)
+                    && !level.getBlockState(globalBlockPosition).is(NuclearScienceBlocks.BLOCK_PLASMA.get())) {
+                throw new IllegalStateException("Failed to create projected Nuclear Science plasma seed");
+            }
+            marker.markNativeEffectStarted();
+            cloud.escaped = true;
+            BlockEntity blockEntity = level.getBlockEntity(globalBlockPosition);
+            if (!(blockEntity instanceof TilePlasma plasma)) {
+                throw new IllegalStateException("Projected Nuclear Science plasma seed has no native block entity");
+            }
+            plasma.ticksExisted.setValue(0);
+            plasma.spread.setValue(candidate.remainingSpread());
+            plasma.setChanged();
             NuclearPlasmaProjectionAudit.record(
-                    Kind.DUPLICATE_SUPPRESSED,
+                    Kind.PARENT_SEED_CREATED,
                     subLevelId,
                     candidate.rootPosition(),
                     localExitPosition,
                     globalPosition,
                     candidate.remainingSpread(),
                     gameTime);
-            return;
         }
-        if (!canNativePlasmaOccupy(level, globalBlockPosition, existingState)) {
-            NuclearPlasmaProjectionAudit.record(
-                    Kind.PARENT_TARGET_PROTECTED,
-                    subLevelId,
-                    candidate.rootPosition(),
-                    localExitPosition,
-                    globalPosition,
-                    candidate.remainingSpread(),
-                    gameTime);
-            return;
-        }
-
-        BlockState plasmaState = NuclearScienceBlocks.BLOCK_PLASMA.get().defaultBlockState();
-        if (!level.setBlockAndUpdate(globalBlockPosition, plasmaState)
-                && !level.getBlockState(globalBlockPosition).is(NuclearScienceBlocks.BLOCK_PLASMA.get())) {
-            throw new IllegalStateException("Failed to create projected Nuclear Science plasma seed");
-        }
-        marker.markNativeEffectStarted();
-        BlockEntity blockEntity = level.getBlockEntity(globalBlockPosition);
-        if (!(blockEntity instanceof TilePlasma plasma)) {
-            throw new IllegalStateException("Projected Nuclear Science plasma seed has no native block entity");
-        }
-        plasma.ticksExisted.setValue(0);
-        plasma.spread.setValue(candidate.remainingSpread());
-        plasma.setChanged();
-        NuclearPlasmaProjectionAudit.record(
-                Kind.PARENT_SEED_CREATED,
-                subLevelId,
-                candidate.rootPosition(),
-                localExitPosition,
-                globalPosition,
-                candidate.remainingSpread(),
-                gameTime);
-    }
-
-    private static @Nullable EscapePath findEscapePath(
-            ServerLevel level, TilePlasma plasma, BoundingBox3ic bounds, int spreadBudget) {
-        BlockPos start = plasma.getBlockPos();
-        Queue<SearchNode> frontier = new ArrayDeque<>();
-        Set<BlockPos> visited = new HashSet<>();
-        frontier.add(new SearchNode(start.immutable(), 0));
-        visited.add(start.immutable());
-
-        while (!frontier.isEmpty()) {
-            SearchNode current = frontier.remove();
-            if (current.distance() >= spreadBudget) {
-                continue;
-            }
-            for (Direction direction : Direction.values()) {
-                BlockPos next = current.position().relative(direction);
-                if (!visited.add(next.immutable()) || !level.isInWorldBounds(next)) {
-                    continue;
-                }
-                BlockState state = level.getBlockState(next);
-                if (!canNativePlasmaOccupy(level, next, state)) {
-                    continue;
-                }
-                int distance = current.distance() + 1;
-                if (outside(bounds, next)) {
-                    return new EscapePath(next.immutable(), distance);
-                }
-                frontier.add(new SearchNode(next.immutable(), distance));
-            }
-        }
-        return null;
     }
 
     private static boolean canNativePlasmaOccupy(Level level, BlockPos position, BlockState state) {
@@ -298,23 +273,32 @@ public final class NuclearPlasmaProjection {
     private record Projection(ServerLevel level, ServerSubLevel subLevel) {}
 
     private static final class PlasmaCloud {
-        private final @Nullable EscapeCandidate candidate;
+        private final BlockPos rootPosition;
+        private final BoundingBox3ic initialBounds;
+        private final long registeredGameTime;
         private boolean escaped;
 
-        private PlasmaCloud(@Nullable EscapeCandidate candidate) {
-            this.candidate = candidate;
+        private PlasmaCloud(
+                BlockPos rootPosition, BoundingBox3ic initialBounds, long registeredGameTime) {
+            this.rootPosition = rootPosition.immutable();
+            this.initialBounds = new BoundingBox3i(initialBounds);
+            this.registeredGameTime = registeredGameTime;
         }
 
-        private synchronized @Nullable EscapeCandidate tryEscape(BlockPos position, int actualRemainingSpread) {
-            if (escaped || candidate == null || !candidate.exitPosition().equals(position)) {
-                return null;
-            }
-            escaped = true;
-            return new EscapeCandidate(
-                    candidate.rootPosition(),
-                    candidate.exitPosition(),
-                    actualRemainingSpread,
-                    candidate.registeredGameTime());
+        private synchronized boolean hasEscaped() {
+            return escaped;
+        }
+
+        private BlockPos rootPosition() {
+            return rootPosition;
+        }
+
+        private BoundingBox3ic initialBounds() {
+            return initialBounds;
+        }
+
+        private long registeredGameTime() {
+            return registeredGameTime;
         }
     }
 
@@ -325,8 +309,4 @@ public final class NuclearPlasmaProjection {
             exitPosition = exitPosition.immutable();
         }
     }
-
-    private record EscapePath(BlockPos exitPosition, int distance) {}
-
-    private record SearchNode(BlockPos position, int distance) {}
 }
