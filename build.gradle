@@ -133,6 +133,7 @@ if (!unsupportedCompatExclusions.isEmpty()) {
     throw new GradleException("Unsupported compat_exclude entries: ${unsupportedCompatExclusions.sort()}")
 }
 enabledCompatRuntimes = enabledCompatRuntimes - compatExclusions
+def gameTestRuntimeId = enabledCompatRuntimes.toList().sort().join('-') ?: 'minimal'
 
 def generatedGameTestResources = layout.buildDirectory.dir('generated/gameTestResources')
 def generateGameTestStructures = tasks.register('generateGameTestStructures') {
@@ -225,6 +226,7 @@ neoForge {
 
         gameTestServer {
             type = 'gameTestServer'
+            gameDirectory = layout.projectDirectory.dir("run/gametest/${gameTestRuntimeId}")
             programArguments.addAll '--mixin.config', "${mod_id}.gametest.mixins.json"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
