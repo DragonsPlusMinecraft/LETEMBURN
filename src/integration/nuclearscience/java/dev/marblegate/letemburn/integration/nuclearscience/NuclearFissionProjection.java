@@ -48,7 +48,7 @@ public final class NuclearFissionProjection {
 
     private NuclearFissionProjection() {}
 
-    public static boolean scheduleMeltdown(TileFissionReactorCore core, int overheatingTicks) {
+    public static boolean scheduleMeltdown(TileFissionReactorCore core) {
         Projection projection = projection(core);
         if (projection == null) {
             return false;
@@ -190,7 +190,6 @@ public final class NuclearFissionProjection {
                 serverLevel,
                 subLevel,
                 localPosition.immutable(),
-                globalCenter,
                 BlockPos.containing(globalCenter));
     }
 
@@ -208,7 +207,6 @@ public final class NuclearFissionProjection {
             ServerLevel level,
             ServerSubLevel subLevel,
             BlockPos localPosition,
-            Vec3 globalCenter,
             BlockPos globalOrigin) {}
 
     private static final class Execution {

@@ -29,7 +29,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import nuclearscience.common.tile.reactor.fission.TileFissionReactorCore;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -41,9 +40,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
         @Condition("nuclearscience") })
 @Mixin(value = TileFissionReactorCore.class, remap = false)
 public abstract class TileFissionReactorCoreMixin {
-    @Shadow
-    private int ticksOverheating;
-
     @ModifyArg(method = "tickServer", at = @At(value = "INVOKE", target = "Lvoltaic/api/radiation/SimpleRadiationSource;<init>(DDIZILnet/minecraft/core/BlockPos;ZZ)V"), index = 5)
     private BlockPos letemburn$projectRadiationPosition(BlockPos original) {
         return NuclearFissionProjection.projectRadiationPosition(
@@ -66,7 +62,7 @@ public abstract class TileFissionReactorCoreMixin {
     private void letemburn$deferProjectedMeltdown(CallbackInfo ci) {
         TileFissionReactorCore core = (TileFissionReactorCore) (Object) this;
         if (!NuclearFissionProjection.isExecuting(core)
-                && NuclearFissionProjection.scheduleMeltdown(core, ticksOverheating)) {
+                && NuclearFissionProjection.scheduleMeltdown(core)) {
             ci.cancel();
         }
     }

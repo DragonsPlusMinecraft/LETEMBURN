@@ -109,7 +109,6 @@ public final class NuclearPlasmaProjection {
         BlockPos globalBlockPosition = BlockPos.containing(globalPosition);
         EscapeCandidate candidate = new EscapeCandidate(
                 cloud.rootPosition(),
-                position,
                 Math.clamp(source.spread.getValue() - 1, 0, MAX_NATIVE_SPREAD),
                 cloud.registeredGameTime());
         EffectKey effectKey = new EffectKey(
@@ -234,10 +233,9 @@ public final class NuclearPlasmaProjection {
     }
 
     private record EscapeCandidate(
-            BlockPos rootPosition, BlockPos exitPosition, int remainingSpread, long registeredGameTime) {
+            BlockPos rootPosition, int remainingSpread, long registeredGameTime) {
         private EscapeCandidate {
             rootPosition = rootPosition.immutable();
-            exitPosition = exitPosition.immutable();
         }
     }
 }

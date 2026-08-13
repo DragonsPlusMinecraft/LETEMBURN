@@ -18,6 +18,7 @@
 
 package dev.marblegate.letemburn.mixin.gametest;
 
+import dev.marblegate.letemburn.gametest.access.NuclearFissionReactorAccess;
 import dev.marblegate.letemburn.gametest.audit.NuclearFissionProjectionAudit;
 import dev.marblegate.letemburn.gametest.audit.NuclearFissionProjectionAudit.Kind;
 import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjection;
@@ -42,7 +43,6 @@ public abstract class NuclearFissionProjectionAuditMixin {
     @Inject(method = "scheduleMeltdown", at = @At("HEAD"))
     private static void letemburn$recordScheduledMeltdown(
             TileFissionReactorCore core,
-            int overheatingTicks,
             CallbackInfoReturnable<Boolean> cir) {
         Projection projection = projection(core, Vec3.atCenterOf(core.getBlockPos()));
         if (projection != null) {
@@ -51,7 +51,7 @@ public abstract class NuclearFissionProjectionAuditMixin {
                     projection.subLevel().getUniqueId(),
                     core.getBlockPos(),
                     projection.globalPosition(),
-                    overheatingTicks);
+                    ((NuclearFissionReactorAccess) core).letemburn$getTicksOverheating());
         }
     }
 
