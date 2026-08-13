@@ -38,6 +38,7 @@ public final class GameTestRegistrar {
             event.register(MekanismPayloadGameTests.class);
         }
         if (ModList.get().isLoaded("draconicevolution")) {
+            event.register(DraconicExplosionEquivalenceGameTests.class);
             event.register(DraconicPayloadGameTests.class);
         }
         if (ModList.get().isLoaded("mekanism") && ModList.get().isLoaded("draconicevolution")) {

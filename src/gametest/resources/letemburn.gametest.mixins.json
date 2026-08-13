@@ -1,9 +1,14 @@
 {
   "required": true,
   "package": "dev.marblegate.letemburn.mixin.gametest",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "GameTestServerOriginMixin"
+    "ExplosionHelperOracleMixin",
+    "ExplosionHelperRemovalOracleMixin",
+    "GameTestServerOriginMixin",
+    "ProcessExplosionDamageOracleMixin",
+    "ProcessExplosionOracleMixin"
   ],
   "injectors": {
     "defaultRequire": 1
