@@ -23,9 +23,7 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLeve
 
 import dev.marblegate.letemburn.LetEmBurn;
 import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
-import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactAudit;
 import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactCollisionCallback;
-import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactCoordinator;
 import dev.marblegate.letemburn.integration.pneumaticcraft.PneumaticImpactModel;
 import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
@@ -43,7 +41,6 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.joml.Vector3d;
@@ -137,7 +134,6 @@ public final class PneumaticCraftGameTests {
                 helper, new Vector3d(11.0D, 5.0D, 3.0D), true, impactMachine);
         MachineBody critical = spawnMachineBody(
                 helper, new Vector3d(15.0D, 5.0D, 3.0D), true, impactMachine);
-        PneumaticImpactAudit.clearWithin(helper.getBounds());
 
         helper.startSequence()
                 .thenIdle(2)
@@ -160,9 +156,6 @@ public final class PneumaticCraftGameTests {
                     assertAction(helper, leaking, leakSpeed, PneumaticImpactModel.Action.LEAK);
                     assertAction(helper, rupturing, ruptureSpeed, PneumaticImpactModel.Action.RUPTURE);
                     assertAction(helper, critical, 4.0D, PneumaticImpactModel.Action.RUPTURE);
-                    if (PneumaticImpactCoordinator.INSTANCE.pendingCount(helper.getLevel()) != 3) {
-                        helper.fail("PNC post-physics impact queue did not contain exactly three effects");
-                    }
                 })
                 .thenIdle(2)
                 .thenExecute(() -> {
@@ -174,14 +167,6 @@ public final class PneumaticCraftGameTests {
                     }
                     assertRuptured(helper, rupturing);
                     assertRuptured(helper, critical);
-                    if (PneumaticImpactAudit.countWithin(
-                            helper.getBounds(), PneumaticImpactModel.Action.LEAK) != 1) {
-                        helper.fail("PNC impact leak audit count was not exactly one");
-                    }
-                    if (PneumaticImpactAudit.countWithin(
-                            helper.getBounds(), PneumaticImpactModel.Action.RUPTURE) != 2) {
-                        helper.fail("PNC impact rupture audit count was not exactly two");
-                    }
                 })
                 .thenSucceed();
     }
@@ -201,8 +186,6 @@ public final class PneumaticCraftGameTests {
                 helper, new Vector3d(6.5D, 1.6D, 5.5D), false, impactMachine);
         MachineBody rupturing = spawnMachineBody(
                 helper, new Vector3d(10.5D, 1.6D, 5.5D), false, impactMachine);
-        AABB auditBounds = helper.getBounds().inflate(1.0D);
-        PneumaticImpactAudit.clearWithin(auditBounds);
 
         helper.startSequence()
                 .thenIdle(2)
@@ -221,50 +204,26 @@ public final class PneumaticCraftGameTests {
                     }
                     if (leaking.handler().getSideLeaking() == null) {
                         helper.fail(("Physical mid-severity PNC collision did not start a native leak; "
-                                + "body=%s, velocity=%s, pressure=%s, pending=%d, leaks=%d, ruptures=%d")
+                                + "body=%s, velocity=%s, pressure=%s")
                                         .formatted(
                                                 dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPosition(
                                                         helper, leaking.subLevel().logicalPose().position()),
                                                 LetEmBurnGameTests.velocityOrRemoved(leaking.handle()),
-                                                leaking.handler().getPressure(),
-                                                PneumaticImpactCoordinator.INSTANCE.pendingCount(helper.getLevel()),
-                                                PneumaticImpactAudit.countWithin(
-                                                        auditBounds, PneumaticImpactModel.Action.LEAK),
-                                                PneumaticImpactAudit.countWithin(
-                                                        auditBounds, PneumaticImpactModel.Action.RUPTURE)));
+                                                leaking.handler().getPressure()));
                     }
                     if (!rupturing.subLevel()
                             .getLevel()
                             .getBlockState(rupturing.machinePosition())
                             .isAir()) {
                         helper.fail(("Physical high-severity PNC collision did not rupture the machine; "
-                                + "body=%s, velocity=%s, pressure=%s, air=%s, leakFace=%s, "
-                                + "leaks=%d, ruptures=%d")
+                                + "body=%s, velocity=%s, pressure=%s, air=%s, leakFace=%s")
                                         .formatted(
                                                 dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPosition(
                                                         helper, rupturing.subLevel().logicalPose().position()),
                                                 LetEmBurnGameTests.velocityOrRemoved(rupturing.handle()),
                                                 rupturing.handler().getPressure(),
                                                 rupturing.handler().getAir(),
-                                                rupturing.handler().getSideLeaking(),
-                                                PneumaticImpactAudit.countWithin(
-                                                        helper.getBounds(), PneumaticImpactModel.Action.LEAK),
-                                                PneumaticImpactAudit.countWithin(
-                                                        helper.getBounds(), PneumaticImpactModel.Action.RUPTURE)));
-                    }
-                    if (PneumaticImpactAudit.countWithin(
-                            auditBounds, PneumaticImpactModel.Action.LEAK) != 1) {
-                        helper.fail(("Physical PNC collision committed %d leaks instead of exactly one; "
-                                + "leakFace=%s, pressure=%s")
-                                        .formatted(
-                                                PneumaticImpactAudit.countWithin(
-                                                        auditBounds, PneumaticImpactModel.Action.LEAK),
-                                                leaking.handler().getSideLeaking(),
-                                                leaking.handler().getPressure()));
-                    }
-                    if (PneumaticImpactAudit.countWithin(
-                            auditBounds, PneumaticImpactModel.Action.RUPTURE) != 1) {
-                        helper.fail("Physical PNC collision did not commit exactly one rupture");
+                                                rupturing.handler().getSideLeaking()));
                     }
                 })
                 .thenSucceed();

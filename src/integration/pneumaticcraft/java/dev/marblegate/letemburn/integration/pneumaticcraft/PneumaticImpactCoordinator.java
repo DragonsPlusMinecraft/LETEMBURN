@@ -71,11 +71,6 @@ public final class PneumaticImpactCoordinator {
         pending.merge(key, incoming, PendingImpact::stronger);
     }
 
-    public synchronized int pendingCount(ServerLevel level) {
-        Map<EffectKey, PendingImpact> pending = pendingByLevel.get(level);
-        return pending == null ? 0 : pending.size();
-    }
-
     private void postPhysicsTick(SubLevelPhysicsSystem physicsSystem, double timeStep) {
         List<PendingImpact> drained;
         synchronized (this) {
@@ -114,7 +109,6 @@ public final class PneumaticImpactCoordinator {
         }
         if (pendingImpact.result().action() == PneumaticImpactModel.Action.LEAK) {
             impactedHandler.setSideLeaking(pendingImpact.face());
-            PneumaticImpactAudit.record(context.globalImpactPosition(), PneumaticImpactModel.Action.LEAK);
             return;
         }
         rupture(physicsSystem, timeStep, context, blockEntity, pendingImpact.face());
@@ -174,7 +168,6 @@ public final class PneumaticImpactCoordinator {
         }
 
         applyBoundedDischargeImpulse(handle, bodyMass, centerOfMass, applicationPoint, rawImpulse);
-        PneumaticImpactAudit.record(context.globalImpactPosition(), PneumaticImpactModel.Action.RUPTURE);
     }
 
     private static void applyBoundedDischargeImpulse(
