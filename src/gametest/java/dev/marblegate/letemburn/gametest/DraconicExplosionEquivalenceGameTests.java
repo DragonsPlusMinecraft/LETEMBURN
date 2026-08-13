@@ -20,14 +20,15 @@ package dev.marblegate.letemburn.gametest;
 
 import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.gametest.draconic.DraconicAnnulusMode;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle.CaptureSnapshot;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle.Event;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle.Kind;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle.Phase;
-import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionAlgorithmAccess;
 import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionState;
+import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionStateAccess;
+import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusMode;
+import dev.marblegate.letemburn.integration.draconic.ProcessExplosionAlgorithmAccess;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -79,15 +80,15 @@ public final class DraconicExplosionEquivalenceGameTests {
 
     private static void verifyRealProcessExplosion(GameTestHelper helper, int radius) {
         BlockPos origin = helper.absolutePos(new BlockPos(6, 48, 6));
-        Map<DraconicAnnulusMode, PreparedRun> prepared = new EnumMap<>(DraconicAnnulusMode.class);
-        Map<DraconicAnnulusMode, RunResult> results = new EnumMap<>(DraconicAnnulusMode.class);
+        Map<RunMode, PreparedRun> prepared = new EnumMap<>(RunMode.class);
+        Map<RunMode, RunResult> results = new EnumMap<>(RunMode.class);
         AtomicReference<ActiveRun> active = new AtomicReference<>();
         GameTestSequence sequence = helper.startSequence();
 
-        for (DraconicAnnulusMode mode : DraconicAnnulusMode.values()) {
+        for (RunMode mode : RunMode.values()) {
             sequence.thenExecute(() -> prepared.put(mode, calculate(helper.getLevel(), origin, radius, mode)));
         }
-        for (DraconicAnnulusMode mode : DraconicAnnulusMode.values()) {
+        for (RunMode mode : RunMode.values()) {
             appendDetonation(sequence, helper, origin, mode, prepared, active, results);
         }
         sequence.thenExecute(() -> compare(helper, radius, results)).thenSucceed();
@@ -97,10 +98,10 @@ public final class DraconicExplosionEquivalenceGameTests {
             GameTestSequence sequence,
             GameTestHelper helper,
             BlockPos origin,
-            DraconicAnnulusMode mode,
-            Map<DraconicAnnulusMode, PreparedRun> prepared,
+            RunMode mode,
+            Map<RunMode, PreparedRun> prepared,
             AtomicReference<ActiveRun> active,
-            Map<DraconicAnnulusMode, RunResult> results) {
+            Map<RunMode, RunResult> results) {
         sequence.thenExecute(() -> active.set(detonate(helper.getLevel(), origin, requirePrepared(prepared, mode))))
                 .thenIdle(SETTLE_TICKS)
                 .thenExecute(() -> {
@@ -113,19 +114,24 @@ public final class DraconicExplosionEquivalenceGameTests {
     }
 
     private static PreparedRun calculate(
-            ServerLevel level, BlockPos origin, int radius, DraconicAnnulusMode mode) {
+            ServerLevel level, BlockPos origin, int radius, RunMode mode) {
         prepareFixture(level, origin);
         WorldSnapshot calculationInitialWorld = snapshotWorld(level, origin);
 
         level.random.setSeed(RANDOM_SEED ^ radius);
         ProcessExplosion explosion = new ProcessExplosion(origin, radius, level, -1);
         ProcessExplosionAlgorithmAccess algorithm = (ProcessExplosionAlgorithmAccess) explosion;
-        if (mode == DraconicAnnulusMode.PRODUCTION) {
-            if (algorithm.letemburn$getAnnulusMode() != DraconicAnnulusMode.PRODUCTION) {
-                throw new IllegalStateException("GameTest production selector did not default to the native algorithm");
+        if (mode == RunMode.PRODUCTION) {
+            if (algorithm.letemburn$getAnnulusMode() != DraconicAnnulusMode.A1) {
+                throw new IllegalStateException("Production ProcessExplosion did not default to A1");
             }
         } else {
-            algorithm.letemburn$setAnnulusMode(mode);
+            algorithm.letemburn$setAnnulusMode(switch (mode) {
+                case LEGACY -> DraconicAnnulusMode.LEGACY;
+                case A0 -> DraconicAnnulusMode.A0;
+                case A1 -> DraconicAnnulusMode.A1;
+                case PRODUCTION -> throw new IllegalStateException("Production mode is selected implicitly");
+            });
         }
         explosion.enableEffect = true;
         explosion.lava = true;
@@ -139,7 +145,7 @@ public final class DraconicExplosionEquivalenceGameTests {
                 throw new IllegalStateException("ProcessExplosion did not complete its safe calculation radius");
             }
         }
-        ProcessExplosionState calculatedState = algorithm.letemburn$captureState();
+        ProcessExplosionState calculatedState = ((ProcessExplosionStateAccess) explosion).letemburn$captureState();
         long randomSuccessor = level.random.nextLong();
         return new PreparedRun(mode, explosion, calculationInitialWorld, calculatedState, randomSuccessor);
     }
@@ -160,7 +166,7 @@ public final class DraconicExplosionEquivalenceGameTests {
         if (!explosion.detonate()) {
             throw new IllegalStateException("Safe ProcessExplosion fixture did not detonate");
         }
-        ProcessExplosionState detonatedState = ((ProcessExplosionAlgorithmAccess) explosion).letemburn$captureState();
+        ProcessExplosionState detonatedState = ((ProcessExplosionStateAccess) explosion).letemburn$captureState();
         return new ActiveRun(
                 prepared.mode(),
                 explosion,
@@ -196,21 +202,21 @@ public final class DraconicExplosionEquivalenceGameTests {
     private static void compare(
             GameTestHelper helper,
             int radius,
-            Map<DraconicAnnulusMode, RunResult> results) {
-        RunResult legacy = requireResult(helper, results, DraconicAnnulusMode.LEGACY);
-        RunResult production = requireResult(helper, results, DraconicAnnulusMode.PRODUCTION);
-        requireEquivalent(helper, radius, legacy, production, "production fallback");
+            Map<RunMode, RunResult> results) {
+        RunResult legacy = requireResult(helper, results, RunMode.LEGACY);
+        RunResult production = requireResult(helper, results, RunMode.PRODUCTION);
+        requireEquivalent(helper, radius, legacy, production, "production A1");
         requireEquivalent(
                 helper,
                 radius,
                 legacy,
-                requireResult(helper, results, DraconicAnnulusMode.A0),
+                requireResult(helper, results, RunMode.A0),
                 "A0");
         requireEquivalent(
                 helper,
                 radius,
                 legacy,
-                requireResult(helper, results, DraconicAnnulusMode.A1),
+                requireResult(helper, results, RunMode.A1),
                 "A1");
 
         long calculationReads = legacy.capture().events().stream()
@@ -337,8 +343,8 @@ public final class DraconicExplosionEquivalenceGameTests {
 
     private static RunResult requireResult(
             GameTestHelper helper,
-            Map<DraconicAnnulusMode, RunResult> results,
-            DraconicAnnulusMode mode) {
+            Map<RunMode, RunResult> results,
+            RunMode mode) {
         RunResult result = results.get(mode);
         if (result == null) {
             helper.fail("Missing Draconic oracle result for " + mode);
@@ -347,8 +353,8 @@ public final class DraconicExplosionEquivalenceGameTests {
     }
 
     private static PreparedRun requirePrepared(
-            Map<DraconicAnnulusMode, PreparedRun> prepared,
-            DraconicAnnulusMode mode) {
+            Map<RunMode, PreparedRun> prepared,
+            RunMode mode) {
         PreparedRun run = prepared.get(mode);
         if (run == null) {
             throw new IllegalStateException("Missing prepared Draconic oracle run for " + mode);
@@ -433,14 +439,14 @@ public final class DraconicExplosionEquivalenceGameTests {
     }
 
     private record PreparedRun(
-            DraconicAnnulusMode mode,
+            RunMode mode,
             ProcessExplosion explosion,
             WorldSnapshot calculationInitialWorld,
             ProcessExplosionState calculatedState,
             long randomSuccessor) {}
 
     private record ActiveRun(
-            DraconicAnnulusMode mode,
+            RunMode mode,
             ProcessExplosion explosion,
             Pig witness,
             WorldSnapshot calculationInitialWorld,
@@ -467,4 +473,11 @@ public final class DraconicExplosionEquivalenceGameTests {
             long xBits,
             long yBits,
             long zBits) {}
+
+    private enum RunMode {
+        PRODUCTION,
+        LEGACY,
+        A0,
+        A1
+    }
 }

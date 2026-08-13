@@ -16,13 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.gametest.draconic;
+package dev.marblegate.letemburn.integration.draconic;
 
-/** Implemented on ProcessExplosion only while the GameTest mixin configuration is active. */
+import org.jetbrains.annotations.ApiStatus;
+
+@ApiStatus.Internal
 public interface ProcessExplosionAlgorithmAccess {
     void letemburn$setAnnulusMode(DraconicAnnulusMode mode);
 
     DraconicAnnulusMode letemburn$getAnnulusMode();
-
-    ProcessExplosionState letemburn$captureState();
 }

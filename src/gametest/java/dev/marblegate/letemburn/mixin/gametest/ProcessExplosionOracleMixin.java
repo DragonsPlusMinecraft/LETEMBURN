@@ -23,16 +23,10 @@ import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import com.brandon3055.draconicevolution.lib.ExplosionHelper;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
-import dev.marblegate.letemburn.gametest.draconic.DraconicAnnulusMode;
 import dev.marblegate.letemburn.gametest.draconic.DraconicProcessExplosionOracle;
-import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionAlgorithmAccess;
 import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionState;
-import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusPredicates;
-import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusPredicates.ScanLine;
+import dev.marblegate.letemburn.gametest.draconic.ProcessExplosionStateAccess;
 import java.util.HashSet;
-import java.util.Objects;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
 import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import net.minecraft.core.BlockPos;
@@ -43,29 +37,16 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Restriction(require = @Condition("draconicevolution"))
 @Mixin(value = ProcessExplosion.class, remap = false)
-public abstract class ProcessExplosionOracleMixin implements ProcessExplosionAlgorithmAccess {
-    @Unique
-    private DraconicAnnulusMode letemburn$annulusMode;
-
-    @Unique
-    private int letemburn$annulusCentreZ;
-
-    @Unique
-    private ScanLine letemburn$annulusScanLine = DraconicAnnulusPredicates.scanLine(0, 0);
-
+public abstract class ProcessExplosionOracleMixin implements ProcessExplosionStateAccess {
     @Shadow
     @Final
     public Vector3 origin;
@@ -96,52 +77,6 @@ public abstract class ProcessExplosionOracleMixin implements ProcessExplosionAlg
 
     @Shadow
     private BlockState lavaState;
-
-    @Shadow
-    public int radius;
-
-    /**
-     * Selects rejected candidates only inside the GameTest output. PRODUCTION and LEGACY both invoke the
-     * untouched upstream distance calculation.
-     */
-    @WrapOperation(method = "updateCalculation", at = @At(value = "INVOKE", target = "Lcom/brandon3055/brandonscore/utils/Utils;getDistance(DDDD)D"))
-    private double letemburn$selectAuditDistance(
-            double x,
-            double z,
-            double centreX,
-            double centreZ,
-            Operation<Double> original) {
-        DraconicAnnulusMode mode = letemburn$getAnnulusMode();
-        if (mode == DraconicAnnulusMode.PRODUCTION || mode == DraconicAnnulusMode.LEGACY) {
-            return original.call(x, z, centreX, centreZ);
-        }
-        return DraconicAnnulusPredicates.membershipDistance(radius, x, z, centreX, centreZ);
-    }
-
-    @ModifyVariable(method = "updateCalculation", at = @At("STORE"), index = 7)
-    private int letemburn$selectAuditScanStart(
-            int originalStart, @Local(index = 6) int x) {
-        if (letemburn$getAnnulusMode() != DraconicAnnulusMode.A1) {
-            return originalStart;
-        }
-        BlockPos centre = origin.pos();
-        letemburn$annulusCentreZ = centre.getZ();
-        letemburn$annulusScanLine = DraconicAnnulusPredicates.scanLine(radius, x - centre.getX());
-        if (letemburn$annulusScanLine.isEmpty()) {
-            return centre.getZ() + radius;
-        }
-        return centre.getZ() + letemburn$annulusScanLine.firstDeltaZ();
-    }
-
-    @Inject(method = "updateCalculation", at = @At(value = "JUMP", opcode = Opcodes.GOTO, ordinal = 0))
-    private void letemburn$selectAuditScanIncrement(
-            CallbackInfo ci, @Local(index = 7) LocalIntRef z) {
-        if (letemburn$getAnnulusMode() != DraconicAnnulusMode.A1) {
-            return;
-        }
-        int relativeZ = z.get() - letemburn$annulusCentreZ;
-        z.set(letemburn$annulusCentreZ + letemburn$annulusScanLine.adjustIncrementedDeltaZ(relativeZ));
-    }
 
     @WrapOperation(method = "updateCalculation", at = @At(value = "INVOKE", target = "Lcodechicken/lib/vec/Vector3;set(DDD)Lcodechicken/lib/vec/Vector3;"))
     private Vector3 letemburn$recordAcceptedPosition(
@@ -262,16 +197,6 @@ public abstract class ProcessExplosionOracleMixin implements ProcessExplosionAlg
     private void letemburn$attachRemovalHelper(ExplosionHelper helper, Operation<Void> original) {
         DraconicProcessExplosionOracle.attachHelper((ProcessExplosion) (Object) this, helper);
         original.call(helper);
-    }
-
-    @Override
-    public void letemburn$setAnnulusMode(DraconicAnnulusMode mode) {
-        letemburn$annulusMode = Objects.requireNonNull(mode);
-    }
-
-    @Override
-    public DraconicAnnulusMode letemburn$getAnnulusMode() {
-        return letemburn$annulusMode == null ? DraconicAnnulusMode.PRODUCTION : letemburn$annulusMode;
     }
 
     @Override

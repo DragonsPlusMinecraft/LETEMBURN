@@ -16,11 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.gametest.draconic;
+package dev.marblegate.letemburn.integration.draconic;
 
-/** GameTest-only selectors for the production path and the two rejected optimization candidates. */
+import org.jetbrains.annotations.ApiStatus;
+
+/** Internal selectors used by the real explosion equivalence GameTest; production defaults to A1. */
+@ApiStatus.Internal
 public enum DraconicAnnulusMode {
-    PRODUCTION,
     LEGACY,
     A0,
     A1
