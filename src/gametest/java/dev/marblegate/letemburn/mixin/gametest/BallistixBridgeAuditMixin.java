@@ -18,16 +18,24 @@
 
 package dev.marblegate.letemburn.mixin.gametest;
 
-import net.neoforged.neoforge.gametest.GameTestHooks;
+import ballistix.common.blast.util.Blast;
+import dev.marblegate.letemburn.common.impulse.ExplosionImpulseBridge.ApplicationResult;
+import dev.marblegate.letemburn.gametest.audit.BallistixImpactAudit;
+import dev.marblegate.letemburn.integration.ballistix.BallistixCompatibilityHooks;
+import me.fallenbreath.conditionalmixin.api.annotation.Condition;
+import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value = GameTestHooks.class, remap = false)
-public abstract class GameTestHooksMixin {
-    @Inject(method = "isGametestServer", at = @At("HEAD"), cancellable = true)
-    private static void letemburn$recognizeDevelopmentClient(CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(true);
+@Restriction(require = @Condition("ballistix"))
+@Mixin(value = BallistixCompatibilityHooks.class, remap = false)
+public abstract class BallistixBridgeAuditMixin {
+    @Inject(method = "onNativeBlastStarted", at = @At("RETURN"))
+    private static void letemburn$recordBridge(
+            Blast blast, CallbackInfoReturnable<ApplicationResult> cir) {
+        BallistixImpactAudit.recordBridge(
+                blast.getBlastType().id(), blast.position, cir.getReturnValue());
     }
 }

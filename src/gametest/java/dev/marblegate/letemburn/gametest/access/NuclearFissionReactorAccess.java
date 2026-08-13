@@ -16,12 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.nuclearscience;
+package dev.marblegate.letemburn.gametest.access;
 
-import org.jetbrains.annotations.ApiStatus;
 import voltaic.prefab.tile.components.type.ComponentTickable;
 
-@ApiStatus.Internal
 public interface NuclearFissionReactorAccess {
     void letemburn$invokeTickServer(ComponentTickable tickable);
 

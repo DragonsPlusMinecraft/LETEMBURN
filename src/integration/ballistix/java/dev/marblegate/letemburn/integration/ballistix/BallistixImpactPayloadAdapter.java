@@ -28,7 +28,6 @@ import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
 import dev.marblegate.letemburn.common.payload.PayloadSnapshot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHooks;
 
 public final class BallistixImpactPayloadAdapter implements ImpactPayloadAdapter {
     public static final BallistixImpactPayloadAdapter INSTANCE = new BallistixImpactPayloadAdapter();
@@ -65,8 +64,5 @@ public final class BallistixImpactPayloadAdapter implements ImpactPayloadAdapter
                 throw new IllegalStateException("Failed to consume projected Ballistix payload");
             }
         });
-        if (GameTestHooks.isGametestServer()) {
-            BallistixImpactAudit.recordImpact(blastType.id(), globalPosition, payload.envelopeDepth());
-        }
     }
 }

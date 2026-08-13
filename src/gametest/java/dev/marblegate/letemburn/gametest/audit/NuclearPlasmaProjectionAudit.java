@@ -16,46 +16,74 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.nuclearscience;
+package dev.marblegate.letemburn.gametest.audit;
 
+import dev.marblegate.letemburn.common.effect.EffectKey;
+import dev.marblegate.letemburn.common.impact.ImpactStatus;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.ApiStatus;
 
-@ApiStatus.Internal
 public final class NuclearPlasmaProjectionAudit {
     private static final List<Event> EVENTS = new CopyOnWriteArrayList<>();
     private static final List<NativeSteamDelivery> NATIVE_STEAM_DELIVERIES = new CopyOnWriteArrayList<>();
+    private static final Map<TargetKey, ConcurrentLinkedQueue<Event>> PENDING = new ConcurrentHashMap<>();
     private static final AtomicInteger CAPTURE_COUNT = new AtomicInteger();
 
     private NuclearPlasmaProjectionAudit() {}
 
-    static void record(
-            Kind kind,
-            UUID subLevelId,
-            BlockPos rootPosition,
-            BlockPos exitPosition,
+    public static void recordCandidate(
+            ServerLevel level,
+            EffectKey key,
             Vec3 globalPosition,
             int remainingSpread,
-            long gameTime) {
+            ImpactStatus status) {
         if (CAPTURE_COUNT.get() == 0) {
             return;
         }
-        EVENTS.add(new Event(
-                kind,
-                subLevelId,
-                rootPosition.immutable(),
-                exitPosition.immutable(),
-                new Vec3(globalPosition.x, globalPosition.y, globalPosition.z),
+        Event candidate = new Event(
+                Kind.CANDIDATE_REGISTERED,
+                key.subLevelId(),
+                rootPosition(key.payloadFingerprint()),
+                key.localPosition(),
+                globalPosition,
                 remainingSpread,
-                gameTime));
+                key.gameTime());
+        EVENTS.add(candidate);
+        EVENTS.add(candidate.withKind(
+                status == ImpactStatus.QUEUED ? Kind.ESCAPE_QUEUED : Kind.DUPLICATE_SUPPRESSED));
+        if (status == ImpactStatus.QUEUED) {
+            PENDING.computeIfAbsent(
+                    new TargetKey(level, BlockPos.containing(globalPosition)),
+                    ignored -> new ConcurrentLinkedQueue<>())
+                    .add(candidate);
+        }
     }
 
-    static void recordNativeSteamDelivery(
+    public static void recordOutcome(ServerLevel level, BlockPos position, Kind kind) {
+        if (CAPTURE_COUNT.get() == 0) {
+            return;
+        }
+        TargetKey key = new TargetKey(level, position);
+        ConcurrentLinkedQueue<Event> candidates = PENDING.get(key);
+        Event candidate = candidates == null ? null : candidates.poll();
+        if (candidate == null) {
+            return;
+        }
+        if (candidates.isEmpty()) {
+            PENDING.remove(key, candidates);
+        }
+        EVENTS.add(candidate.withKind(kind));
+    }
+
+    public static void recordNativeSteamDelivery(
             BlockPos plasmaPosition, int requestedAmount, int temperature, int acceptedAmount, long gameTime) {
         if (CAPTURE_COUNT.get() == 0) {
             return;
@@ -68,6 +96,7 @@ public final class NuclearPlasmaProjectionAudit {
         if (CAPTURE_COUNT.getAndIncrement() == 0) {
             EVENTS.clear();
             NATIVE_STEAM_DELIVERIES.clear();
+            PENDING.clear();
         }
     }
 
@@ -80,6 +109,7 @@ public final class NuclearPlasmaProjectionAudit {
         if (remaining == 0) {
             EVENTS.clear();
             NATIVE_STEAM_DELIVERIES.clear();
+            PENDING.clear();
         }
     }
 
@@ -101,6 +131,15 @@ public final class NuclearPlasmaProjectionAudit {
         return List.copyOf(NATIVE_STEAM_DELIVERIES);
     }
 
+    private static BlockPos rootPosition(String fingerprint) {
+        int registeredTimeSeparator = fingerprint.lastIndexOf(':');
+        int rootSeparator = fingerprint.lastIndexOf(':', registeredTimeSeparator - 1);
+        if (rootSeparator < 0 || registeredTimeSeparator <= rootSeparator + 1) {
+            throw new IllegalArgumentException("Unexpected projected plasma fingerprint: " + fingerprint);
+        }
+        return BlockPos.of(Long.parseLong(fingerprint.substring(rootSeparator + 1, registeredTimeSeparator)));
+    }
+
     public enum Kind {
         CANDIDATE_REGISTERED,
         ESCAPE_QUEUED,
@@ -116,7 +155,18 @@ public final class NuclearPlasmaProjectionAudit {
             BlockPos exitPosition,
             Vec3 globalPosition,
             int remainingSpread,
-            long gameTime) {}
+            long gameTime) {
+        private Event withKind(Kind replacement) {
+            return new Event(
+                    replacement,
+                    subLevelId,
+                    rootPosition,
+                    exitPosition,
+                    globalPosition,
+                    remainingSpread,
+                    gameTime);
+        }
+    }
 
     public record NativeSteamDelivery(
             BlockPos plasmaPosition,
@@ -124,4 +174,10 @@ public final class NuclearPlasmaProjectionAudit {
             int temperature,
             int acceptedAmount,
             long gameTime) {}
+
+    private record TargetKey(ServerLevel level, BlockPos position) {
+        private TargetKey {
+            position = position.immutable();
+        }
+    }
 }

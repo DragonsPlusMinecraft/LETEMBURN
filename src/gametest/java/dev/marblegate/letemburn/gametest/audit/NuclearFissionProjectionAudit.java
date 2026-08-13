@@ -16,23 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.nuclearscience;
+package dev.marblegate.letemburn.gametest.audit;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.ApiStatus;
+import nuclearscience.common.tile.reactor.fission.TileFissionReactorCore;
 
-@ApiStatus.Internal
 public final class NuclearFissionProjectionAudit {
     private static final List<Event> EVENTS = new CopyOnWriteArrayList<>();
+    private static final Map<TileFissionReactorCore, Event> MELTDOWNS = Collections.synchronizedMap(new IdentityHashMap<>());
     private static volatile boolean capturing;
 
     private NuclearFissionProjectionAudit() {}
 
-    static void record(
+    public static void record(
             Kind kind,
             UUID subLevelId,
             BlockPos localPosition,
@@ -49,6 +52,34 @@ public final class NuclearFissionProjectionAudit {
                 overheatingTicks));
     }
 
+    public static void recordScheduled(
+            TileFissionReactorCore core,
+            UUID subLevelId,
+            BlockPos localPosition,
+            Vec3 globalPosition,
+            int overheatingTicks) {
+        Event event = new Event(
+                Kind.MELTDOWN_QUEUED,
+                subLevelId,
+                localPosition.immutable(),
+                globalPosition,
+                overheatingTicks);
+        if (capturing) {
+            EVENTS.add(event);
+            MELTDOWNS.put(core, event);
+        }
+    }
+
+    public static void recordFromMeltdown(TileFissionReactorCore core, Kind kind) {
+        if (!capturing) {
+            return;
+        }
+        Event scheduled = MELTDOWNS.get(core);
+        if (scheduled != null) {
+            EVENTS.add(scheduled.withKind(kind));
+        }
+    }
+
     public static List<Event> events() {
         return List.copyOf(EVENTS);
     }
@@ -59,12 +90,14 @@ public final class NuclearFissionProjectionAudit {
 
     public static void beginCapture() {
         EVENTS.clear();
+        MELTDOWNS.clear();
         capturing = true;
     }
 
     public static void endCapture() {
         capturing = false;
         EVENTS.clear();
+        MELTDOWNS.clear();
     }
 
     public enum Kind {
@@ -83,5 +116,14 @@ public final class NuclearFissionProjectionAudit {
             UUID subLevelId,
             BlockPos localPosition,
             Vec3 globalPosition,
-            int overheatingTicks) {}
+            int overheatingTicks) {
+        private Event withKind(Kind replacement) {
+            return new Event(
+                    replacement,
+                    subLevelId,
+                    localPosition,
+                    globalPosition,
+                    overheatingTicks);
+        }
+    }
 }

@@ -23,7 +23,6 @@ import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
 import dev.marblegate.letemburn.common.effect.EffectKey;
 import dev.marblegate.letemburn.common.effect.TransactionalEffect;
 import dev.marblegate.letemburn.common.impact.ImpactStatus;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjectionAudit.Kind;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import java.util.Collections;
@@ -73,16 +72,9 @@ public final class NuclearFissionProjection {
             ImpactStatus status = ChainReactionCoordinator.INSTANCE.reserve(
                     projection.level(),
                     key,
-                    marker -> executeNativeMeltdown(core, projection, snapshot, marker, overheatingTicks),
+                    marker -> executeNativeMeltdown(core, projection, snapshot, marker),
                     () -> rollback(core, snapshot));
-            if (status == ImpactStatus.QUEUED) {
-                NuclearFissionProjectionAudit.record(
-                        Kind.MELTDOWN_QUEUED,
-                        projection.subLevel().getUniqueId(),
-                        projection.localPosition(),
-                        projection.globalCenter(),
-                        overheatingTicks);
-            } else {
+            if (status != ImpactStatus.QUEUED) {
                 clearPending(core);
             }
         } catch (RuntimeException exception) {
@@ -111,13 +103,6 @@ public final class NuclearFissionProjection {
             return false;
         }
         execution.markInitialWriteSeen();
-        Projection projection = execution.projection();
-        NuclearFissionProjectionAudit.record(
-                Kind.INITIAL_PARENT_CORE_WRITE_SKIPPED,
-                projection.subLevel().getUniqueId(),
-                projection.localPosition(),
-                projection.globalCenter(),
-                execution.overheatingTicks());
         return true;
     }
 
@@ -128,80 +113,54 @@ public final class NuclearFissionProjection {
         }
         execution.snapshot().consume(core);
         execution.marker().markNativeEffectStarted();
-        Projection projection = execution.projection();
-        NuclearFissionProjectionAudit.record(
-                Kind.NATIVE_EFFECT_STARTED,
-                projection.subLevel().getUniqueId(),
-                projection.localPosition(),
-                projection.globalCenter(),
-                execution.overheatingTicks());
     }
 
-    public static void recordNativeExplosion(TileFissionReactorCore core) {
-        Execution execution = ACTIVE.get();
-        if (execution == null || execution.core() != core) {
-            return;
-        }
-        Projection projection = execution.projection();
-        NuclearFissionProjectionAudit.record(
-                Kind.NATIVE_EXPLOSION,
-                projection.subLevel().getUniqueId(),
-                projection.localPosition(),
-                projection.globalCenter(),
-                execution.overheatingTicks());
+    public static BlockPos projectRadiationPosition(
+            TileFissionReactorCore core, BlockPos localPosition) {
+        return projectCurrentBlockPosition(core, localPosition);
     }
 
-    public static BlockPos projectCurrentBlockPosition(
-            TileFissionReactorCore core, BlockPos localPosition, Kind kind) {
-        CurrentProjection projection = currentProjection(core, Vec3.atCenterOf(localPosition));
-        if (projection == null) {
+    public static BlockPos projectSoundPosition(
+            TileFissionReactorCore core, BlockPos localPosition) {
+        return projectCurrentBlockPosition(core, localPosition);
+    }
+
+    public static Vec3 projectHeatPosition(TileFissionReactorCore core, Vec3 localPosition) {
+        return projectCurrentPosition(core, localPosition);
+    }
+
+    private static BlockPos projectCurrentBlockPosition(
+            TileFissionReactorCore core, BlockPos localPosition) {
+        Vec3 globalPosition = currentGlobalPosition(core, Vec3.atCenterOf(localPosition));
+        if (globalPosition == null) {
             return localPosition;
         }
-        NuclearFissionProjectionAudit.record(
-                kind,
-                projection.subLevel().getUniqueId(),
-                core.getBlockPos(),
-                projection.globalPosition(),
-                -1);
-        return BlockPos.containing(projection.globalPosition());
+        return BlockPos.containing(globalPosition);
     }
 
-    public static Vec3 projectCurrentPosition(TileFissionReactorCore core, Vec3 localPosition, Kind kind) {
-        CurrentProjection projection = currentProjection(core, localPosition);
-        if (projection == null) {
+    private static Vec3 projectCurrentPosition(TileFissionReactorCore core, Vec3 localPosition) {
+        Vec3 globalPosition = currentGlobalPosition(core, localPosition);
+        if (globalPosition == null) {
             return localPosition;
         }
-        NuclearFissionProjectionAudit.record(
-                kind,
-                projection.subLevel().getUniqueId(),
-                core.getBlockPos(),
-                projection.globalPosition(),
-                -1);
-        return projection.globalPosition();
+        return globalPosition;
     }
 
     private static void executeNativeMeltdown(
             TileFissionReactorCore core,
             Projection projection,
             CoreSnapshot snapshot,
-            TransactionalEffect.CommitMarker marker,
-            int overheatingTicks) {
+            TransactionalEffect.CommitMarker marker) {
         if (ACTIVE.get() != null) {
             throw new IllegalStateException("Nested Nuclear Science meltdown projection is not supported");
         }
-        Execution execution = new Execution(core, projection, snapshot, marker, overheatingTicks);
+        Execution execution = new Execution(core, projection, snapshot, marker);
         ACTIVE.set(execution);
         try {
             core.meltdown();
             if (!marker.nativeEffectStarted()) {
                 throw new IllegalStateException("Native fission meltdown completed without starting an effect");
             }
-            NuclearFissionProjectionAudit.record(
-                    Kind.MELTDOWN_COMPLETE,
-                    projection.subLevel().getUniqueId(),
-                    projection.localPosition(),
-                    projection.globalCenter(),
-                    overheatingTicks);
         } finally {
             ACTIVE.remove();
             clearPending(core);
@@ -235,15 +194,14 @@ public final class NuclearFissionProjection {
                 BlockPos.containing(globalCenter));
     }
 
-    private static @Nullable CurrentProjection currentProjection(
+    private static @Nullable Vec3 currentGlobalPosition(
             TileFissionReactorCore core, Vec3 localPosition) {
         Level level = core.getLevel();
         if (!(level instanceof ServerLevel serverLevel)
                 || !(Sable.HELPER.getContaining(core) instanceof ServerSubLevel subLevel)) {
             return null;
         }
-        Vec3 globalPosition = Sable.HELPER.projectOutOfSubLevel(serverLevel, localPosition);
-        return new CurrentProjection(subLevel, globalPosition);
+        return Sable.HELPER.projectOutOfSubLevel(serverLevel, localPosition);
     }
 
     private record Projection(
@@ -253,27 +211,22 @@ public final class NuclearFissionProjection {
             Vec3 globalCenter,
             BlockPos globalOrigin) {}
 
-    private record CurrentProjection(ServerSubLevel subLevel, Vec3 globalPosition) {}
-
     private static final class Execution {
         private final TileFissionReactorCore core;
         private final Projection projection;
         private final CoreSnapshot snapshot;
         private final TransactionalEffect.CommitMarker marker;
-        private final int overheatingTicks;
         private boolean initialWriteSeen;
 
         private Execution(
                 TileFissionReactorCore core,
                 Projection projection,
                 CoreSnapshot snapshot,
-                TransactionalEffect.CommitMarker marker,
-                int overheatingTicks) {
+                TransactionalEffect.CommitMarker marker) {
             this.core = core;
             this.projection = projection;
             this.snapshot = snapshot;
             this.marker = marker;
-            this.overheatingTicks = overheatingTicks;
         }
 
         private TileFissionReactorCore core() {
@@ -290,10 +243,6 @@ public final class NuclearFissionProjection {
 
         private TransactionalEffect.CommitMarker marker() {
             return marker;
-        }
-
-        private int overheatingTicks() {
-            return overheatingTicks;
         }
 
         private boolean initialWriteSeen() {

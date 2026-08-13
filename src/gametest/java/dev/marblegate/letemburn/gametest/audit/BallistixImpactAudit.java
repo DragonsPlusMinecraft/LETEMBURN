@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.ballistix;
+package dev.marblegate.letemburn.gametest.audit;
 
 import dev.marblegate.letemburn.common.impulse.ExplosionImpulseBridge.ApplicationResult;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -30,11 +30,11 @@ public final class BallistixImpactAudit {
 
     private BallistixImpactAudit() {}
 
-    static void recordImpact(ResourceLocation type, BlockPos position, int envelopeDepth) {
+    public static void recordImpact(ResourceLocation type, BlockPos position, int envelopeDepth) {
         IMPACTS.add(new ImpactEvent(type, position.immutable(), envelopeDepth));
     }
 
-    static void recordBridge(ResourceLocation type, BlockPos position, ApplicationResult result) {
+    public static void recordBridge(ResourceLocation type, BlockPos position, ApplicationResult result) {
         BRIDGES.add(new BridgeEvent(type, position.immutable(), result));
     }
 

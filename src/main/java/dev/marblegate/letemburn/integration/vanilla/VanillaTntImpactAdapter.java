@@ -25,7 +25,6 @@ import dev.marblegate.letemburn.common.payload.PayloadSnapshot;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHooks;
 
 public final class VanillaTntImpactAdapter implements ImpactPayloadAdapter {
     public static final VanillaTntImpactAdapter INSTANCE = new VanillaTntImpactAdapter();
@@ -39,10 +38,6 @@ public final class VanillaTntImpactAdapter implements ImpactPayloadAdapter {
             return Probe.notHandled();
         }
         if (context.impactVelocity() * context.impactVelocity() < IMPACT_SPEED * IMPACT_SPEED) {
-            if (GameTestHooks.isGametestServer()) {
-                VanillaTntImpactAudit.recordBelowThreshold(
-                        context.globalImpactPosition(), context.impactVelocity(), payload.envelopeDepth());
-            }
             return Probe.belowThreshold("minecraft-tnt");
         }
         return Probe.ready("minecraft-tnt", null);
@@ -70,12 +65,5 @@ public final class VanillaTntImpactAdapter implements ImpactPayloadAdapter {
             throw new IllegalStateException("Failed to consume projected TNT payload");
         }
         marker.markNativeEffectStarted();
-        if (GameTestHooks.isGametestServer()) {
-            VanillaTntImpactAudit.recordSpawn(
-                    spawnPosition,
-                    context.globalImpactPosition(),
-                    primedTnt.getFuse(),
-                    payload.envelopeDepth());
-        }
     }
 }

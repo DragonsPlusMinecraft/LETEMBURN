@@ -22,9 +22,9 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearPlasmaProjectionAudit;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearPlasmaProjectionAudit.Event;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearPlasmaProjectionAudit.Kind;
+import dev.marblegate.letemburn.gametest.audit.NuclearPlasmaProjectionAudit;
+import dev.marblegate.letemburn.gametest.audit.NuclearPlasmaProjectionAudit.Event;
+import dev.marblegate.letemburn.gametest.audit.NuclearPlasmaProjectionAudit.Kind;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;

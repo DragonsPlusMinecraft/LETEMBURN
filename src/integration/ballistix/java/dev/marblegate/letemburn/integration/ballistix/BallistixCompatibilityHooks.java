@@ -26,7 +26,6 @@ import dev.marblegate.letemburn.common.impulse.ExplosionImpulseBridge.Applicatio
 import dev.marblegate.letemburn.common.impulse.ExplosionImpulseProfile;
 import dev.marblegate.letemburn.config.LetEmBurnConfig;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.gametest.GameTestHooks;
 
 public final class BallistixCompatibilityHooks {
     private static final ThreadLocal<ProjectedCommit> ACTIVE_PROJECTED_COMMIT = new ThreadLocal<>();
@@ -63,7 +62,7 @@ public final class BallistixCompatibilityHooks {
         if (profile == null) {
             return ApplicationResult.NONE_PROFILE;
         }
-        ApplicationResult result = ExplosionImpulseBridge.INSTANCE.applyOnce(
+        return ExplosionImpulseBridge.INSTANCE.applyOnce(
                 level,
                 blast,
                 blast.position.getCenter(),
@@ -71,10 +70,6 @@ public final class BallistixCompatibilityHooks {
                 LetEmBurnConfig.BALLISTIX_IMPULSE_COEFFICIENT.get(),
                 LetEmBurnConfig.BALLISTIX_OCCLUDED_FACTOR.get(),
                 LetEmBurnConfig.BALLISTIX_MAX_DELTA_V.get());
-        if (GameTestHooks.isGametestServer()) {
-            BallistixImpactAudit.recordBridge(blast.getBlastType().id(), blast.position, result);
-        }
-        return result;
     }
 
     private record ProjectedCommit(

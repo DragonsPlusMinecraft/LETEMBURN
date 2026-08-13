@@ -28,10 +28,8 @@ import io.github.discusser.moretnt.objects.blocks.BaseTNTBlock;
 import io.github.discusser.moretnt.objects.entities.BasePrimedTNT;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHooks;
 
 public final class MoreTntImpactAdapter implements ImpactPayloadAdapter {
     public static final MoreTntImpactAdapter INSTANCE = new MoreTntImpactAdapter();
@@ -75,8 +73,6 @@ public final class MoreTntImpactAdapter implements ImpactPayloadAdapter {
                 context.localBlockPosition().getY(),
                 context.localBlockPosition().getZ() + 0.5D));
         Direction projectedFacing = projectHorizontalFacing(context, spec.localFacing());
-        BlockPos parentPosition = BlockPos.containing(spawnPosition);
-        boolean parentContainedSourceBlock = context.level().getBlockState(parentPosition).is(spec.block());
         BasePrimedTNT primedTnt = MoreTntNativeFactory.create(
                 context.level(), spawnPosition, spec, projectedFacing);
         try {
@@ -88,16 +84,6 @@ public final class MoreTntImpactAdapter implements ImpactPayloadAdapter {
             }
             spec.block().sendEntityFacingPacket(primedTnt);
             marker.markNativeEffectStarted();
-            if (GameTestHooks.isGametestServer()) {
-                MoreTntImpactAudit.record(
-                        context.subLevel().getUniqueId(),
-                        spec,
-                        spawnPosition,
-                        projectedFacing,
-                        payload.envelopeDepth(),
-                        primedTnt.getFuse(),
-                        parentContainedSourceBlock);
-            }
         } catch (RuntimeException exception) {
             if (!marker.nativeEffectStarted()) {
                 primedTnt.discard();

@@ -21,15 +21,12 @@ package dev.marblegate.letemburn.integration.nuclearscience;
 import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
 import dev.marblegate.letemburn.common.effect.EffectKey;
 import dev.marblegate.letemburn.common.effect.TransactionalEffect;
-import dev.marblegate.letemburn.common.impact.ImpactStatus;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearPlasmaProjectionAudit.Kind;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import java.util.Collections;
 import java.util.Map;
-import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -115,14 +112,6 @@ public final class NuclearPlasmaProjection {
                 position,
                 Math.clamp(source.spread.getValue() - 1, 0, MAX_NATIVE_SPREAD),
                 cloud.registeredGameTime());
-        NuclearPlasmaProjectionAudit.record(
-                Kind.CANDIDATE_REGISTERED,
-                projection.subLevel().getUniqueId(),
-                candidate.rootPosition(),
-                position,
-                globalPosition,
-                candidate.remainingSpread(),
-                gameTime);
         EffectKey effectKey = new EffectKey(
                 projection.level().dimension(),
                 projection.subLevel().getUniqueId(),
@@ -133,84 +122,34 @@ public final class NuclearPlasmaProjection {
                         + candidate.rootPosition().asLong()
                         + ':'
                         + candidate.registeredGameTime());
-        ImpactStatus status = ChainReactionCoordinator.INSTANCE.reserve(
+        ChainReactionCoordinator.INSTANCE.reserve(
                 projection.level(),
                 effectKey,
                 marker -> createNativeParentSeed(
                         projection.level(),
-                        projection.subLevel().getUniqueId(),
                         cloud,
                         candidate,
-                        position,
                         globalBlockPosition,
-                        globalPosition,
-                        gameTime,
                         marker),
                 () -> {});
-        NuclearPlasmaProjectionAudit.record(
-                status == ImpactStatus.QUEUED ? Kind.ESCAPE_QUEUED : Kind.DUPLICATE_SUPPRESSED,
-                projection.subLevel().getUniqueId(),
-                candidate.rootPosition(),
-                position,
-                globalPosition,
-                candidate.remainingSpread(),
-                gameTime);
-    }
-
-    public static void observeNativeSteamDelivery(
-            TilePlasma plasma, int requestedAmount, int temperature, int acceptedAmount) {
-        if (!(plasma.getLevel() instanceof ServerLevel serverLevel)
-                || Sable.HELPER.getContaining(plasma) instanceof ServerSubLevel) {
-            return;
-        }
-        NuclearPlasmaProjectionAudit.recordNativeSteamDelivery(
-                plasma.getBlockPos(), requestedAmount, temperature, acceptedAmount, serverLevel.getGameTime());
     }
 
     private static void createNativeParentSeed(
             ServerLevel level,
-            UUID subLevelId,
             PlasmaCloud cloud,
             EscapeCandidate candidate,
-            BlockPos localExitPosition,
             BlockPos globalBlockPosition,
-            Vec3 globalPosition,
-            long gameTime,
             TransactionalEffect.CommitMarker marker) {
         synchronized (cloud) {
             if (cloud.escaped) {
-                NuclearPlasmaProjectionAudit.record(
-                        Kind.DUPLICATE_SUPPRESSED,
-                        subLevelId,
-                        candidate.rootPosition(),
-                        localExitPosition,
-                        globalPosition,
-                        candidate.remainingSpread(),
-                        gameTime);
                 return;
             }
             BlockState existingState = level.getBlockState(globalBlockPosition);
             if (existingState.is(NuclearScienceBlocks.BLOCK_PLASMA.get())) {
                 cloud.escaped = true;
-                NuclearPlasmaProjectionAudit.record(
-                        Kind.DUPLICATE_SUPPRESSED,
-                        subLevelId,
-                        candidate.rootPosition(),
-                        localExitPosition,
-                        globalPosition,
-                        candidate.remainingSpread(),
-                        gameTime);
                 return;
             }
             if (!canNativePlasmaOccupy(level, globalBlockPosition, existingState)) {
-                NuclearPlasmaProjectionAudit.record(
-                        Kind.PARENT_TARGET_PROTECTED,
-                        subLevelId,
-                        candidate.rootPosition(),
-                        localExitPosition,
-                        globalPosition,
-                        candidate.remainingSpread(),
-                        gameTime);
                 return;
             }
 
@@ -228,14 +167,6 @@ public final class NuclearPlasmaProjection {
             plasma.ticksExisted.setValue(0);
             plasma.spread.setValue(candidate.remainingSpread());
             plasma.setChanged();
-            NuclearPlasmaProjectionAudit.record(
-                    Kind.PARENT_SEED_CREATED,
-                    subLevelId,
-                    candidate.rootPosition(),
-                    localExitPosition,
-                    globalPosition,
-                    candidate.remainingSpread(),
-                    gameTime);
         }
     }
 

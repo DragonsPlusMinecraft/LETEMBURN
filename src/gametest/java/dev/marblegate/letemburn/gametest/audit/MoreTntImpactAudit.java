@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.moretnt;
+package dev.marblegate.letemburn.gametest.audit;
 
 import dev.marblegate.letemburn.integration.moretnt.MoreTntNativeFactory.NativeTntSpec;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public final class MoreTntImpactAudit {
 
     private MoreTntImpactAudit() {}
 
-    static synchronized void record(
+    public static synchronized void record(
             UUID subLevelId,
             NativeTntSpec spec,
             Vec3 position,

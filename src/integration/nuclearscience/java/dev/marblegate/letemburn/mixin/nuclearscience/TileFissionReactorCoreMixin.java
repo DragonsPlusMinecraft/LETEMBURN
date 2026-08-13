@@ -21,60 +21,45 @@ package dev.marblegate.letemburn.mixin.nuclearscience;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjection;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjectionAudit.Kind;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionReactorAccess;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
 import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import nuclearscience.common.tile.reactor.fission.TileFissionReactorCore;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import voltaic.prefab.tile.components.type.ComponentTickable;
 
 @Restriction(require = {
         @Condition("sable"),
         @Condition("nuclearscience") })
 @Mixin(value = TileFissionReactorCore.class, remap = false)
-public abstract class TileFissionReactorCoreMixin implements NuclearFissionReactorAccess {
+public abstract class TileFissionReactorCoreMixin {
     @Shadow
     private int ticksOverheating;
 
-    @Override
-    @Invoker("tickServer")
-    public abstract void letemburn$invokeTickServer(ComponentTickable tickable);
-
-    @Override
-    public int letemburn$getTicksOverheating() {
-        return ticksOverheating;
-    }
-
     @ModifyArg(method = "tickServer", at = @At(value = "INVOKE", target = "Lvoltaic/api/radiation/SimpleRadiationSource;<init>(DDIZILnet/minecraft/core/BlockPos;ZZ)V"), index = 5)
     private BlockPos letemburn$projectRadiationPosition(BlockPos original) {
-        return NuclearFissionProjection.projectCurrentBlockPosition(
-                (TileFissionReactorCore) (Object) this, original, Kind.RADIATION);
+        return NuclearFissionProjection.projectRadiationPosition(
+                (TileFissionReactorCore) (Object) this, original);
     }
 
     @ModifyArg(method = "tickServer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;playSound(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/core/BlockPos;Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/sounds/SoundSource;FF)V"), index = 1)
     private BlockPos letemburn$projectReactorSound(BlockPos original) {
-        return NuclearFissionProjection.projectCurrentBlockPosition(
-                (TileFissionReactorCore) (Object) this, original, Kind.SOUND);
+        return NuclearFissionProjection.projectSoundPosition(
+                (TileFissionReactorCore) (Object) this, original);
     }
 
     @ModifyArg(method = "tickServer", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/AABB;ofSize(Lnet/minecraft/world/phys/Vec3;DDD)Lnet/minecraft/world/phys/AABB;"), index = 0)
     private Vec3 letemburn$projectExternalHeatQuery(Vec3 original) {
-        return NuclearFissionProjection.projectCurrentPosition(
-                (TileFissionReactorCore) (Object) this, original, Kind.HEAT_QUERY);
+        return NuclearFissionProjection.projectHeatPosition(
+                (TileFissionReactorCore) (Object) this, original);
     }
 
     @Inject(method = "meltdown", at = @At("HEAD"), cancellable = true)
@@ -103,19 +88,5 @@ public abstract class TileFissionReactorCoreMixin implements NuclearFissionReact
         }
         NuclearFissionProjection.beginNativeEffects(core);
         return original.call(level, position, state);
-    }
-
-    @WrapOperation(method = "meltdown", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;explode(Lnet/minecraft/world/entity/Entity;DDDFLnet/minecraft/world/level/Level$ExplosionInteraction;)Lnet/minecraft/world/level/Explosion;"))
-    private Explosion letemburn$recordNativeExplosion(
-            Level level,
-            Entity source,
-            double x,
-            double y,
-            double z,
-            float radius,
-            Level.ExplosionInteraction interaction,
-            Operation<Explosion> original) {
-        NuclearFissionProjection.recordNativeExplosion((TileFissionReactorCore) (Object) this);
-        return original.call(level, source, x, y, z, radius, interaction);
     }
 }

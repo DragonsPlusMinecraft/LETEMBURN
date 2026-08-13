@@ -22,10 +22,10 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.absolutePosi
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjectionAudit;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjectionAudit.Event;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionProjectionAudit.Kind;
-import dev.marblegate.letemburn.integration.nuclearscience.NuclearFissionReactorAccess;
+import dev.marblegate.letemburn.gametest.access.NuclearFissionReactorAccess;
+import dev.marblegate.letemburn.gametest.audit.NuclearFissionProjectionAudit;
+import dev.marblegate.letemburn.gametest.audit.NuclearFissionProjectionAudit.Event;
+import dev.marblegate.letemburn.gametest.audit.NuclearFissionProjectionAudit.Kind;
 import dev.ryanhcode.sable.Sable;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;

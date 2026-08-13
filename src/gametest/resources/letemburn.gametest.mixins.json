@@ -4,13 +4,20 @@
   "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "BallistixBridgeAuditMixin",
+    "BallistixImpactAuditMixin",
     "DraconicExplosionSchedulerMixin",
     "ExplosionHelperOracleMixin",
     "ExplosionHelperRemovalOracleMixin",
-    "GameTestHooksMixin",
     "GameTestServerOriginMixin",
+    "MoreTntImpactAuditMixin",
+    "NuclearFissionProjectionAuditMixin",
+    "NuclearFissionReactorGameTestMixin",
+    "NuclearPlasmaProjectionAuditMixin",
+    "NuclearPlasmaSteamAuditMixin",
     "ProcessExplosionDamageOracleMixin",
-    "ProcessExplosionOracleMixin"
+    "ProcessExplosionOracleMixin",
+    "VanillaTntImpactAuditMixin"
   ],
   "injectors": {
     "defaultRequire": 1

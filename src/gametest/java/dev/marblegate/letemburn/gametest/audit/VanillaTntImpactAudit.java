@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration.vanilla;
+package dev.marblegate.letemburn.gametest.audit;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -31,13 +31,13 @@ public final class VanillaTntImpactAudit {
 
     private VanillaTntImpactAudit() {}
 
-    static void recordSpawn(
+    public static void recordSpawn(
             Vec3 position, Vec3 sourcePosition, int initialFuse, int envelopeDepth) {
         lastSpawnPosition = position;
         SPAWNS.add(new SpawnEvent(position, sourcePosition, initialFuse, envelopeDepth));
     }
 
-    static void recordBelowThreshold(Vec3 position, double impactVelocity, int envelopeDepth) {
+    public static void recordBelowThreshold(Vec3 position, double impactVelocity, int envelopeDepth) {
         BELOW_THRESHOLD.add(new BelowThresholdEvent(position, impactVelocity, envelopeDepth));
     }
 

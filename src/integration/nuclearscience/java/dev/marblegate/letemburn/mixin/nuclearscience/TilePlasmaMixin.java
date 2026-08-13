@@ -26,7 +26,6 @@ import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import nuclearscience.api.turbine.ISteamReceiver;
 import nuclearscience.common.tile.reactor.fusion.TilePlasma;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -54,17 +53,5 @@ public abstract class TilePlasmaMixin {
         NuclearPlasmaProjection.observeNativeBlockWrite(
                 (TilePlasma) (Object) this, level, position, state);
         return changed;
-    }
-
-    @WrapOperation(method = "tickServer", at = @At(value = "INVOKE", target = "Lnuclearscience/api/turbine/ISteamReceiver;receiveSteam(II)I"))
-    private int letemburn$observeNativeSteamDelivery(
-            ISteamReceiver receiver,
-            int amount,
-            int temperature,
-            Operation<Integer> original) {
-        int accepted = original.call(receiver, amount, temperature);
-        NuclearPlasmaProjection.observeNativeSteamDelivery(
-                (TilePlasma) (Object) this, amount, temperature, accepted);
-        return accepted;
     }
 }

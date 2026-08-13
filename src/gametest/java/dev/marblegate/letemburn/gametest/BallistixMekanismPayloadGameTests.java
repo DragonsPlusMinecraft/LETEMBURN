@@ -24,7 +24,7 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSubLeve
 import ballistix.common.block.subtype.SubtypeBlast;
 import ballistix.registers.BallistixBlocks;
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.integration.ballistix.BallistixImpactAudit;
+import dev.marblegate.letemburn.gametest.audit.BallistixImpactAudit;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
