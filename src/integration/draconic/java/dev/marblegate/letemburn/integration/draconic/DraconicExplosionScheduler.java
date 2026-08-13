@@ -18,8 +18,17 @@
 
 package dev.marblegate.letemburn.integration.draconic;
 
+import com.brandon3055.brandonscore.handlers.ProcessHandler;
+import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.ApiStatus;
 
-public interface ProcessExplosionOriginAccess {
-    void letemburn$setProjectedOrigin(BlockPos position);
+@ApiStatus.Internal
+public final class DraconicExplosionScheduler {
+    private DraconicExplosionScheduler() {}
+
+    public static void schedule(ServerLevel level, BlockPos position, int radius) {
+        ProcessHandler.addProcess(new ProcessExplosion(position, radius, level, 0));
+    }
 }

@@ -4,6 +4,7 @@
   "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "DraconicExplosionSchedulerMixin",
     "ExplosionHelperOracleMixin",
     "ExplosionHelperRemovalOracleMixin",
     "GameTestHooksMixin",

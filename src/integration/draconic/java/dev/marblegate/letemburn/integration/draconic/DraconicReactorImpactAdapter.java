@@ -20,7 +20,6 @@ package dev.marblegate.letemburn.integration.draconic;
 
 import com.brandon3055.brandonscore.utils.MathUtils;
 import com.brandon3055.draconicevolution.DEConfig;
-import com.brandon3055.draconicevolution.blocks.reactor.ProcessExplosion;
 import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCore.ReactorState;
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.marblegate.letemburn.common.effect.TransactionalEffect;
@@ -32,7 +31,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHooks;
 
 public final class DraconicReactorImpactAdapter implements ImpactPayloadAdapter {
     public static final DraconicReactorImpactAdapter INSTANCE = new DraconicReactorImpactAdapter();
@@ -85,21 +83,11 @@ public final class DraconicReactorImpactAdapter implements ImpactPayloadAdapter 
                 50.0F,
                 350.0F)
                 * DEConfig.reactorExplosionScale;
-        ProcessExplosion explosion = new ProcessExplosion(globalPosition, (int) radius, context.level(), -1);
-        if (explosion instanceof ProcessExplosionOriginAccess originAccess) {
-            originAccess.letemburn$setProjectedOrigin(globalPosition);
-        }
         if (!payload.removeOuter(context.level(), context.localBlockPosition())) {
             throw new IllegalStateException("Failed to consume projected Draconic reactor payload");
         }
+        DraconicExplosionScheduler.schedule(context.level(), globalPosition, (int) radius);
         marker.markNativeEffectStarted();
-
-        if (GameTestHooks.isGametestServer()) {
-            DraconicExplosionAudit.record(
-                    globalPosition, context.globalImpactPosition(), (int) radius);
-            return;
-        }
-        explosion.detonate();
     }
 
     private record ReactorFuel(double convertedFuel, double reactableFuel) {}

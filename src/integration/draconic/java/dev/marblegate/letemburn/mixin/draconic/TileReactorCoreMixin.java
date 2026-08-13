@@ -25,11 +25,12 @@ import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCo
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import dev.marblegate.letemburn.integration.draconic.ProcessExplosionOriginAccess;
+import dev.marblegate.letemburn.integration.draconic.DraconicExplosionScheduler;
 import dev.ryanhcode.sable.Sable;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
 import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -69,9 +70,10 @@ public abstract class TileReactorCoreMixin extends TileBCore {
     @WrapOperation(method = "updateCriticalState", at = @At(value = "INVOKE", target = "Lcom/brandon3055/draconicevolution/blocks/reactor/ProcessExplosion;detonate()Z"))
     private boolean letemburn$projectExplosionOrigin(ProcessExplosion instance, Operation<Boolean> original) {
         var helper = Sable.HELPER;
-        if (helper.isInPlotGrid(this) && instance instanceof ProcessExplosionOriginAccess originAccess) {
+        if (helper.isInPlotGrid(this)) {
             BlockPos pos = BlockPos.containing(helper.projectOutOfSubLevel(this.level, Vec3.atCenterOf(getBlockPos())));
-            originAccess.letemburn$setProjectedOrigin(pos);
+            DraconicExplosionScheduler.schedule((ServerLevel) this.level, pos, instance.maxRadius);
+            return true;
         }
         return original.call(instance);
     }

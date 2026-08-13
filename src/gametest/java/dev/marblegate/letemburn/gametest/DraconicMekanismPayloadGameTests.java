@@ -26,7 +26,7 @@ import com.brandon3055.draconicevolution.blocks.reactor.tileentity.TileReactorCo
 import com.brandon3055.draconicevolution.init.DEContent;
 import dev.marblegate.letemburn.LetEmBurn;
 import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
-import dev.marblegate.letemburn.integration.draconic.DraconicExplosionAudit;
+import dev.marblegate.letemburn.gametest.draconic.DraconicExplosionScheduleAudit;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
@@ -48,7 +48,7 @@ public final class DraconicMekanismPayloadGameTests {
         ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
         SubLevelPhysicsSystem physicsSystem = LetEmBurnGameTests.requirePhysics(container);
         LetEmBurnGameTests.addWall(helper, 3);
-        DraconicExplosionAudit.clearWithin(helper.getBounds());
+        DraconicExplosionScheduleAudit.clearWithin(helper.getBounds());
 
         TileReactorCore reactor = new TileReactorCore(
                 BlockPos.ZERO, DEContent.REACTOR_CORE.get().defaultBlockState());
@@ -72,12 +72,12 @@ public final class DraconicMekanismPayloadGameTests {
 
         helper.startSequence()
                 .thenExecuteFor(20, () -> {
-                    if (DraconicExplosionAudit.suppressedDetonationsWithin(helper.getBounds()) > 1) {
+                    if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) > 1) {
                         helper.fail("One cardboard reactor impact queued more than one native explosion");
                     }
                 })
                 .thenExecute(() -> {
-                    if (DraconicExplosionAudit.suppressedDetonationsWithin(helper.getBounds()) != 1) {
+                    if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) != 1) {
                         helper.fail(("Cardboard reactor impact did not construct exactly one native explosion; "
                                 + "body=%s, velocity=%s, mass=%s, payload=%s, pending=%d")
                                         .formatted(

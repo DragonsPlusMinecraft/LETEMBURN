@@ -32,7 +32,7 @@ import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
 import dev.marblegate.letemburn.common.impact.ImpactPayloadAdapter;
 import dev.marblegate.letemburn.common.impact.ProjectedEffectContext;
 import dev.marblegate.letemburn.common.payload.PayloadEnvelopeResolver;
-import dev.marblegate.letemburn.integration.draconic.DraconicExplosionAudit;
+import dev.marblegate.letemburn.gametest.draconic.DraconicExplosionScheduleAudit;
 import dev.marblegate.letemburn.integration.draconic.DraconicReactorImpactAdapter;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
@@ -167,7 +167,7 @@ public final class DraconicPayloadGameTests {
         ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
         SubLevelPhysicsSystem physicsSystem = LetEmBurnGameTests.requirePhysics(container);
         LetEmBurnGameTests.addWall(helper, 3);
-        DraconicExplosionAudit.clearWithin(helper.getBounds());
+        DraconicExplosionScheduleAudit.clearWithin(helper.getBounds());
         ServerSubLevel subLevel = spawnSubLevel(
                 container,
                 absolutePosition(helper, new Vector3d(2.5D, 4.0D, 1.5D)),
@@ -179,7 +179,7 @@ public final class DraconicPayloadGameTests {
         helper.startSequence()
                 .thenIdle(10)
                 .thenExecute(() -> {
-                    if (DraconicExplosionAudit.suppressedDetonationsWithin(helper.getBounds()) != 0) {
+                    if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) != 0) {
                         helper.fail("Below-threshold reactor impact queued an explosion");
                     }
                     if (!subLevel.getLevel().getBlockState(corePosition).is(DEContent.REACTOR_CORE.get())) {
@@ -194,7 +194,7 @@ public final class DraconicPayloadGameTests {
         ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
         SubLevelPhysicsSystem physicsSystem = LetEmBurnGameTests.requirePhysics(container);
         LetEmBurnGameTests.addWall(helper, 3);
-        DraconicExplosionAudit.clearWithin(helper.getBounds());
+        DraconicExplosionScheduleAudit.clearWithin(helper.getBounds());
         // Keep the sublevel alive after payload consumption so its plot cannot be recycled before assertion.
         ServerSubLevel subLevel = spawnSubLevel(
                 container,
@@ -206,12 +206,12 @@ public final class DraconicPayloadGameTests {
 
         helper.startSequence()
                 .thenExecuteFor(20, () -> {
-                    if (DraconicExplosionAudit.suppressedDetonationsWithin(helper.getBounds()) > 1) {
+                    if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) > 1) {
                         helper.fail("One reactor impact queued more than one native explosion");
                     }
                 })
                 .thenExecute(() -> {
-                    if (DraconicExplosionAudit.suppressedDetonationsWithin(helper.getBounds()) != 1) {
+                    if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) != 1) {
                         helper.fail(("Reactor impact did not construct exactly one native explosion; "
                                 + "body=%s, velocity=%s, mass=%s, payload=%s, pending=%d")
                                         .formatted(
@@ -226,6 +226,35 @@ public final class DraconicPayloadGameTests {
                     }
                 })
                 .thenSucceed();
+    }
+
+    @GameTest(templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 20)
+    public static void naturalMeltdownSchedulesParentExplosionAfterCountdown(GameTestHelper helper) {
+        ServerSubLevelContainer container = LetEmBurnGameTests.requireContainer(helper);
+        DraconicExplosionScheduleAudit.clearWithin(helper.getBounds());
+        ServerSubLevel subLevel = spawnSubLevel(
+                container,
+                absolutePosition(helper, new Vector3d(5.5D, 20.0D, 5.5D)),
+                accessor -> placeFailedReactor(accessor, false));
+        BlockPos corePosition = subLevel.getPlot().getCenterBlock();
+        if (!(subLevel.getLevel().getBlockEntity(corePosition) instanceof TileReactorCore core)) {
+            helper.fail("Failed reactor core was not created in the Sable sublevel");
+            return;
+        }
+
+        core.updateCriticalState();
+        core.explosionCountdown.set(1);
+        core.updateCriticalState();
+
+        if (DraconicExplosionScheduleAudit.scheduledWithin(helper.getBounds()) != 1) {
+            helper.fail("Natural sublevel meltdown did not schedule exactly one parent-world explosion");
+            return;
+        }
+        if (!subLevel.getLevel().getBlockState(corePosition).isAir()) {
+            helper.fail("Natural sublevel meltdown left the reactor core behind after scheduling");
+            return;
+        }
+        helper.succeed();
     }
 
     static void placeFailedReactor(CommonLevelAccessor accessor, boolean includeIntrusion) {

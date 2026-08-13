@@ -28,7 +28,6 @@ import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusMode;
 import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusPredicates;
 import dev.marblegate.letemburn.integration.draconic.DraconicAnnulusPredicates.ScanLine;
 import dev.marblegate.letemburn.integration.draconic.ProcessExplosionAlgorithmAccess;
-import dev.marblegate.letemburn.integration.draconic.ProcessExplosionOriginAccess;
 import me.fallenbreath.conditionalmixin.api.annotation.Condition;
 import me.fallenbreath.conditionalmixin.api.annotation.Restriction;
 import net.minecraft.core.BlockPos;
@@ -38,17 +37,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Restriction(require = {
         @Condition("sable"),
         @Condition("draconicevolution") })
 @Mixin(value = ProcessExplosion.class, remap = false)
-public abstract class ProcessExplosionMixin
-        implements ProcessExplosionOriginAccess, ProcessExplosionAlgorithmAccess {
-    @Unique
-    private BlockPos letemburn$projectedOrigin;
-
+public abstract class ProcessExplosionMixin implements ProcessExplosionAlgorithmAccess {
     @Unique
     private int letemburn$annulusCentreZ;
 
@@ -58,20 +52,12 @@ public abstract class ProcessExplosionMixin
     @Unique
     private DraconicAnnulusMode letemburn$annulusMode;
 
-    @Mutable
     @Shadow
     @Final
     public Vector3 origin;
 
-    @Mutable
-    @Shadow
-    protected boolean calculationComplete;
-
     @Shadow
     public int radius;
-
-    @Shadow
-    public abstract void updateCalculation();
 
     @WrapOperation(method = "updateCalculation", at = @At(value = "INVOKE", target = "Lcom/brandon3055/brandonscore/utils/Utils;getDistance(DDDD)D"))
     private double letemburn$replaceAnnulusSquareRoot(
@@ -109,21 +95,6 @@ public abstract class ProcessExplosionMixin
         }
         int relativeZ = z.get() - letemburn$annulusCentreZ;
         z.set(letemburn$annulusCentreZ + letemburn$annulusScanLine.adjustIncrementedDeltaZ(relativeZ));
-    }
-
-    @Inject(method = "detonate", at = @At(value = "HEAD"))
-    private void letemburn$calculateAtProjectedOrigin(CallbackInfoReturnable<Boolean> cir) {
-        if (letemburn$projectedOrigin != null) {
-            origin = Vector3.fromBlockPosCenter(letemburn$projectedOrigin);
-            while (!calculationComplete) {
-                updateCalculation();
-            }
-        }
-    }
-
-    @Override
-    public void letemburn$setProjectedOrigin(BlockPos position) {
-        letemburn$projectedOrigin = position;
     }
 
     @Override
