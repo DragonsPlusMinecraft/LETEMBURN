@@ -240,6 +240,44 @@ public final class MoreTntGameTests {
                 .thenSucceed();
     }
 
+    @GameTest(batch = "letemburn_moretnt_snow_4x", templateNamespace = LetEmBurn.MOD_ID, template = "bootstrap", timeoutTicks = 240)
+    public static void nativeSnowFourXPayloadUsesFullVariant(GameTestHelper helper) {
+        QueuedPayload payload = queueDirectPayload(
+                helper,
+                MoreTNTBlocks.SNOW_TNT_4X.block().get(),
+                Direction.NORTH,
+                new Vector3d(8.5D, 8.0D, 8.5D));
+        UUID subLevelId = payload.subLevel().getUniqueId();
+        MoreTntImpactAudit.clearForSubLevel(subLevelId);
+        BlockPos floorCenter = BlockPos.containing(payload.spawnPosition()).below();
+        for (int x = -18; x <= 18; x++) {
+            for (int z = -18; z <= 18; z++) {
+                helper.getLevel().setBlock(
+                        floorCenter.offset(x, 0, z), Blocks.STONE.defaultBlockState(), 3);
+            }
+        }
+
+        helper.startSequence()
+                .thenIdle(12)
+                .thenExecute(() -> {
+                    SpawnEvent event = requireSingleEvent(helper, subLevelId, "snow_tnt_4x", 0);
+                    assertNativeSnapshot(helper, event, Direction.NORTH, 16.0F, false);
+                    if (countBlocks(helper, event.position(), 18, state -> state.is(Blocks.SNOW)) == 0) {
+                        helper.fail(("Projected Snow TNT 4x did not execute its native snow-layer effect; "
+                                + "event=%s, floor=%s, remainingStone=%d")
+                                        .formatted(
+                                                event,
+                                                floorCenter,
+                                                countBlocks(
+                                                        helper,
+                                                        event.position(),
+                                                        18,
+                                                        state -> state.is(Blocks.STONE))));
+                    }
+                })
+                .thenSucceed();
+    }
+
     static QueuedPayload queueDirectPayload(
             GameTestHelper helper,
             BaseTNTBlock block,
