@@ -18,17 +18,17 @@
 
 package dev.marblegate.letemburn.integration.draconic;
 
-/** Exact integer predicates for the horizontal annulus scanned by a Draconic reactor explosion. */
+/** Experimental integer predicates retained for audit tests and pure-computation benchmarks. */
 public final class DraconicAnnulusPredicates {
     private DraconicAnnulusPredicates() {}
 
     /**
-     * Returns a classification value for ProcessExplosion's two distance comparisons.
+     * Returns a classification value that preserves ProcessExplosion's two annulus comparisons.
      *
-     * <p>The intercepted value is used only by {@code distance < radius && distance >= radius - 1}.
-     * Returning a value in the matching comparison interval avoids a square root while retaining both
-     * original branches. If an upstream version supplies non-integral coordinates, this method falls back to
-     * the original Euclidean calculation instead of changing its behaviour.
+     * <p>This is not a behavior-preserving replacement for the original distance. ProcessExplosion also feeds
+     * that distance into radial-resistance accumulation, so substituting this classification value changes the
+     * explosion even when the accepted coordinate sequence is identical. It is intentionally not used by the
+     * production mixin. Non-integral coordinates use the original Euclidean calculation.
      */
     public static double membershipDistance(
             int radius, double x, double z, double centreX, double centreZ) {
