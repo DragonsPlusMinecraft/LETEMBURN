@@ -94,6 +94,9 @@ public final class NuclearScienceFissionGameTests {
         levelData.setGameTime(originalGameTime + Math.floorMod(-originalGameTime, 10L));
         ((NuclearFissionReactorAccess) core).letemburn$invokeTickServer(manualTick);
         levelData.setGameTime(originalGameTime);
+        boolean aliveAfterHeatQuery = target.isAlive();
+        float healthAfterHeatQuery = target.getHealth();
+        target.discard();
 
         helper.startSequence()
                 .thenIdle(2)
@@ -107,12 +110,13 @@ public final class NuclearScienceFissionGameTests {
                     assertProjectedEvent(helper, Kind.RADIATION, localCorePosition, projectedBlockCenter);
                     assertProjectedEvent(helper, Kind.SOUND, localCorePosition, projectedBlockCenter);
                     assertProjectedEvent(helper, Kind.HEAT_QUERY, localCorePosition, projectedHeatCenter);
-                    if (!target.isAlive() || target.getHealth() >= initialHealth) {
+                    if (!aliveAfterHeatQuery || healthAfterHeatQuery >= initialHealth) {
                         helper.fail("Projected fission heat query did not damage a water-cooled external entity");
                     }
                     if (!subLevel.getLevel().getBlockState(localCorePosition).is(fissionCoreBlock())) {
                         helper.fail("Projecting ongoing fission effects moved the internal reactor core");
                     }
+                    RadiationSystem.removeRadiationSource(helper.getLevel(), globalOrigin, true);
                     NuclearFissionProjectionAudit.endCapture();
                 })
                 .thenSucceed();
