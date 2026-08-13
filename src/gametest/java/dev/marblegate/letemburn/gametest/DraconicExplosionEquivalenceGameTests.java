@@ -393,9 +393,17 @@ public final class DraconicExplosionEquivalenceGameTests {
         for (int x = -SNAPSHOT_HORIZONTAL_RADIUS; x <= SNAPSHOT_HORIZONTAL_RADIUS; x++) {
             for (int y = minimumY; y <= maximumY; y++) {
                 for (int z = -SNAPSHOT_HORIZONTAL_RADIUS; z <= SNAPSHOT_HORIZONTAL_RADIUS; z++) {
+                    BlockState state = x == -SNAPSHOT_HORIZONTAL_RADIUS
+                            || x == SNAPSHOT_HORIZONTAL_RADIUS
+                            || y == minimumY
+                            || y == maximumY
+                            || z == -SNAPSHOT_HORIZONTAL_RADIUS
+                            || z == SNAPSHOT_HORIZONTAL_RADIUS
+                                    ? Blocks.BEDROCK.defaultBlockState()
+                                    : Blocks.AIR.defaultBlockState();
                     level.setBlock(
                             new BlockPos(origin.getX() + x, y, origin.getZ() + z),
-                            Blocks.AIR.defaultBlockState(),
+                            state,
                             2);
                 }
             }
