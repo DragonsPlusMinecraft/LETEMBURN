@@ -4,7 +4,8 @@
   "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "TileFissionReactorCoreMixin"
+    "TileFissionReactorCoreMixin",
+    "TilePlasmaMixin"
   ],
   "injectors": {
     "defaultRequire": 1

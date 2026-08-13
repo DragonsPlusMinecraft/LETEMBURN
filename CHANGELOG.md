@@ -6,6 +6,8 @@
 * Supported payloads now preserve their native behavior after impact, including fuse timing, explosive variants, persistent blast effects, and radiation.
 * Mekanism Cardboard Boxes can now recursively wrap supported explosives without replacing the innermost payload's native effect.
 * Ballistix explosions now transfer their native directional force to nearby Sable structures, including offset impacts that can produce rotation.
+* Nuclear Science fission reactors built on Sable structures now complete their native 200-tick overheat and meltdown sequence at the structure's current parent-world position, including the molten core, blast, radiation, sound, and external heat damage.
+* Nuclear Science plasma that reaches an opening in a moving Sable structure now escapes at the opening's current parent-world position and continues its native spread, destruction, steam production, protection rules, and 80-tick lifetime. Sealed plasma remains contained.
 * PneumaticCraft machines on Sable structures can now leak or rupture after sufficiently severe impacts. Real leak pressure and flow apply bounded thrust in the opposite direction.
 * Added server configuration for payload envelope limits, Draconic reactor impact speed, PneumaticCraft damage and thrust, and Ballistix blast impulse.
 * Updated the supported baseline to Minecraft 1.21.1, NeoForge 21.1.248, Create 6.0.10, and Sable 2.0.3.
@@ -22,3 +24,4 @@
 * Impact effects are deferred until the end of the physics step and deduplicated, preventing repeated explosions from a single collision.
 * Cancelled or failed native effects now restore an unconsumed payload instead of silently deleting it.
 * Optional integrations are isolated so LET!EM!BURN! can load safely when their corresponding mods are absent.
+* Corrected dependency metadata so only Create and Sable are required; Simulated, Aeronautics, Offroad, and all other compatibility targets remain optional.

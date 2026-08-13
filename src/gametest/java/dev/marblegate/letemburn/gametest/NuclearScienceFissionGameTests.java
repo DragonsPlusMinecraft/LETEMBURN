@@ -142,7 +142,7 @@ public final class NuclearScienceFissionGameTests {
                 .thenWaitUntil(() -> advanceToPreMeltdownTick(
                         helper, core, manualTick, reactorHandle, reactorSubLevel))
                 .thenExecute(() -> {
-                    int internalStoneBlocks = countInternalStoneBlocks(container);
+                    int internalStoneBlocks = countInternalStoneBlocks(reactorSubLevel);
                     if (internalStoneBlocks != 8) {
                         helper.fail("Native fission processing changed the internal reactor structure before "
                                 + "meltdown: found "
@@ -239,16 +239,14 @@ public final class NuclearScienceFissionGameTests {
         }
     }
 
-    private static int countInternalStoneBlocks(ServerSubLevelContainer container) {
+    private static int countInternalStoneBlocks(ServerSubLevel subLevel) {
         int count = 0;
-        for (ServerSubLevel subLevel : container.getAllSubLevels()) {
-            CommonLevelAccessor accessor = subLevel.getPlot().getEmbeddedLevelAccessor();
-            for (int x = -4; x <= 4; x++) {
-                for (int y = -4; y <= 4; y++) {
-                    for (int z = -4; z <= 4; z++) {
-                        if (accessor.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) {
-                            count++;
-                        }
+        CommonLevelAccessor accessor = subLevel.getPlot().getEmbeddedLevelAccessor();
+        for (int x = -4; x <= 4; x++) {
+            for (int y = -4; y <= 4; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    if (accessor.getBlockState(new BlockPos(x, y, z)).is(Blocks.STONE)) {
+                        count++;
                     }
                 }
             }
