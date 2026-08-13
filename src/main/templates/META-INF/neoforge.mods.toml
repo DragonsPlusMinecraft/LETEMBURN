@@ -35,7 +35,14 @@ ${integration_mixin_blocks}
 [[dependencies."${mod_id}"]]
     modId="sable"
     type="required"
-    versionRange="[${sable_version},)"
+    versionRange="[${sable_version},3.0.0)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies."${mod_id}"]]
+    modId="create"
+    type="required"
+    versionRange="[${create_version_production},6.1.0)"
     ordering="AFTER"
     side="BOTH"
 

@@ -66,7 +66,13 @@ def integrations = [
         ]
 ]
 
-def supportedCompatRuntimes = integrations.keySet() as Set
+def aviationRuntimes = [
+        simulated  : "dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}",
+        aeronautics: "dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}",
+        offroad    : "dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}"
+]
+
+def supportedCompatRuntimes = (integrations.keySet() + aviationRuntimes.keySet()) as Set
 def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
 def enabledCompatRuntimes
 if (compatRuntimeSelection == 'full') {
@@ -238,6 +244,19 @@ integrations.each { name, ignored ->
     }
 }
 
+aviationRuntimes.each { name, ignored ->
+    def optionalRuntime = configurations.create("${name}LocalRuntime") {
+        canBeConsumed = false
+        canBeResolved = false
+    }
+    if (enabledCompatRuntimes.contains(name)
+            || (name == 'simulated' && enabledCompatRuntimes.intersect(['aeronautics', 'offroad']))) {
+        configurations.named('runtimeClasspath') {
+            extendsFrom optionalRuntime
+        }
+    }
+}
+
 repositories {
     maven { url = uri('https://maven.createmod.net') } // Ponder, Flywheel
     maven { url = uri('https://mvn.devos.one/snapshots') } // Registrate
@@ -273,17 +292,16 @@ dependencies {
     localRuntime("top.theillusivec4.curios:curios-neoforge:${curios_version}+${curios_minecraft_version}")
 
     localImplementation("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}")
-    localImplementation("dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
-    localImplementation("dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
-    localImplementation("dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}") { transitive = false }
+
+    aviationRuntimes.each { name, notation ->
+        add("${name}LocalRuntime", notation) { transitive = false }
+    }
 
     integrations.each { name, integration ->
         integration.dependencies.each { notation ->
             add("${name}LocalImplementation", notation)
         }
     }
-
-    localRuntime("maven.modrinth:createaddition:${createaddition_version}") // Creative Generator for fast tests
 
     testImplementation(platform("org.junit:junit-bom:${junit_version}"))
     testImplementation('org.junit.jupiter:junit-jupiter')
@@ -293,12 +311,19 @@ dependencies {
 def integrationMixinBlocks = integrations.values()
         .collect { integration -> "[[mixins]]\nconfig=\"${integration.mixinConfig}\"" }
         .join('\n\n')
-def optionalDependencyBlocks = integrations.values()
+def optionalCoreModVersions = [
+        simulated  : create_aeronautics_version,
+        aeronautics: create_aeronautics_version,
+        offroad    : create_aeronautics_version
+]
+def optionalDependencyBlocks = (optionalCoreModVersions.entrySet().collect { entry ->
+    [modId: entry.key, version: entry.value]
+} + integrations.values()
         .collectMany { integration ->
             integration.modVersions.collect { dependencyModId, dependencyVersion ->
                 [modId: dependencyModId, version: dependencyVersion]
             }
-        }
+        })
         .collect { dependency ->
             [
                     "[[dependencies.\"${mod_id}\"]]",
@@ -326,6 +351,7 @@ def generateModMetadata = tasks.register('generateModMetadata', ProcessResources
             mod_description            : mod_description,
             mod_github                 : mod_github,
             sable_version              : sable_version,
+            create_version_production  : create_version_production,
             integration_mixin_blocks   : integrationMixinBlocks,
             optional_dependency_blocks : optionalDependencyBlocks
     ]
