@@ -87,4 +87,17 @@ class DeferredEffectQueueTest {
         assertEquals(0, queue.pendingCount());
         assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
     }
+
+    @Test
+    void expiresCommittedDeduplicationAtNextPhysicsTick() {
+        DeferredEffectQueue<String> queue = new DeferredEffectQueue<>();
+
+        assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
+        assertTrue(queue.drain().isEmpty());
+        assertFalse(queue.reserve(8, "payload", marker -> {}, () -> {}));
+
+        queue.beginPhysicsTick();
+
+        assertTrue(queue.reserve(8, "payload", marker -> {}, () -> {}));
+    }
 }

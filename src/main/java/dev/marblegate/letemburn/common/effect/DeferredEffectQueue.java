@@ -71,6 +71,10 @@ public final class DeferredEffectQueue<K> {
         return pending.size();
     }
 
+    synchronized void beginPhysicsTick() {
+        seenEpochs.keySet().removeIf(key -> !pending.containsKey(key));
+    }
+
     public synchronized boolean cancel(K key) {
         PendingEffect removed = pending.remove(key);
         if (removed != null) {

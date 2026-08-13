@@ -44,6 +44,7 @@ public final class ChainReactionCoordinator {
             return;
         }
         registered = true;
+        SableEventPlatform.INSTANCE.onPhysicsTick(this::prePhysicsTick);
         SableEventPlatform.INSTANCE.onPostPhysicsTick(this::postPhysicsTick);
         NeoForge.EVENT_BUS.addListener(this::levelUnload);
     }
@@ -73,6 +74,13 @@ public final class ChainReactionCoordinator {
     public boolean cancel(ProjectedEffectContext context, String payloadFingerprint) {
         DeferredEffectQueue<EffectKey> queue = queues.get(context.level());
         return queue != null && queue.cancel(context.key(payloadFingerprint));
+    }
+
+    private void prePhysicsTick(SubLevelPhysicsSystem physicsSystem, double timeStep) {
+        DeferredEffectQueue<EffectKey> queue = queues.get(physicsSystem.getLevel());
+        if (queue != null) {
+            queue.beginPhysicsTick();
+        }
     }
 
     private void postPhysicsTick(SubLevelPhysicsSystem physicsSystem, double timeStep) {
