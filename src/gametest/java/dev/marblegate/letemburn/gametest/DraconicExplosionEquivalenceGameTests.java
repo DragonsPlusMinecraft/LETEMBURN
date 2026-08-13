@@ -45,6 +45,7 @@ import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -376,6 +377,15 @@ public final class DraconicExplosionEquivalenceGameTests {
                 origin.getX() + SNAPSHOT_HORIZONTAL_RADIUS + 1,
                 maximumY + 1,
                 origin.getZ() + SNAPSHOT_HORIZONTAL_RADIUS + 1);
+        BoundingBox scheduledTickCleanup = new BoundingBox(
+                origin.getX() - SNAPSHOT_HORIZONTAL_RADIUS,
+                minimumY,
+                origin.getZ() - SNAPSHOT_HORIZONTAL_RADIUS,
+                origin.getX() + SNAPSHOT_HORIZONTAL_RADIUS,
+                maximumY,
+                origin.getZ() + SNAPSHOT_HORIZONTAL_RADIUS);
+        level.getBlockTicks().clearArea(scheduledTickCleanup);
+        level.getFluidTicks().clearArea(scheduledTickCleanup);
         for (Pig pig : level.getEntitiesOfClass(Pig.class, cleanup)) {
             pig.discard();
         }
