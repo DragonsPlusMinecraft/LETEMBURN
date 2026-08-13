@@ -134,6 +134,10 @@ if (!unsupportedCompatExclusions.isEmpty()) {
 }
 enabledCompatRuntimes = enabledCompatRuntimes - compatExclusions
 def gameTestRuntimeId = enabledCompatRuntimes.toList().sort().join('-') ?: 'minimal'
+def gameTestRunId = providers.gradleProperty('game_test_run_id').getOrElse('default')
+if (!(gameTestRunId ==~ /[A-Za-z0-9._-]+/)) {
+    throw new GradleException('game_test_run_id may contain only letters, digits, dots, underscores, and hyphens')
+}
 
 def generatedGameTestResources = layout.buildDirectory.dir('generated/gameTestResources')
 def generateGameTestStructures = tasks.register('generateGameTestStructures') {
@@ -226,7 +230,7 @@ neoForge {
 
         gameTestServer {
             type = 'gameTestServer'
-            gameDirectory = layout.projectDirectory.dir("run/gametest/${gameTestRuntimeId}")
+            gameDirectory = layout.projectDirectory.dir("run/gametest/${gameTestRuntimeId}/${gameTestRunId}")
             programArguments.addAll '--mixin.config', "${mod_id}.gametest.mixins.json"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
