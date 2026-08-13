@@ -18,61 +18,96 @@ java {
     withSourcesJar()
 }
 
+def optionalDependencyCatalog = [
+        codechickenlib   : [notation: "maven.modrinth:codechicken-lib:${codechicken_lib_version}"],
+        brandonscore     : [notation: "maven.modrinth:brandons-core:${brandons_core_version}"],
+        draconic         : [
+                notation       : "maven.modrinth:draconic-evolution:${draconic_evolution_version}",
+                modId          : 'draconicevolution',
+                metadataVersion: draconic_evolution_version
+        ],
+        mekanism         : [
+                notation       : "maven.modrinth:mekanism:${mekanism_version}",
+                modId          : 'mekanism',
+                metadataVersion: mekanism_metadata_version
+        ],
+        voltaic          : [
+                notation       : "curse.maven:voltaic-1237904:${voltaic_curse_file}",
+                modId          : 'voltaic',
+                metadataVersion: voltaic_version
+        ],
+        electrodynamics  : [
+                notation       : "curse.maven:electrodynamics-316867:${electrodynamics_curse_file}",
+                modId          : 'electrodynamics',
+                metadataVersion: electrodynamics_version
+        ],
+        nuclearscience   : [
+                notation       : "curse.maven:nuclear-science-318646:${nuclear_science_curse_file}",
+                modId          : 'nuclearscience',
+                metadataVersion: nuclear_science_version
+        ],
+        ballistix        : [
+                notation       : "curse.maven:ballistix-443915:${ballistix_curse_file}",
+                modId          : 'ballistix',
+                metadataVersion: ballistix_version
+        ],
+        pneumaticcraft  : [
+                notation       : "curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}",
+                modId          : 'pneumaticcraft',
+                metadataVersion: pneumaticcraft_version
+        ],
+        moretnt          : [
+                notation       : "curse.maven:more-fun-tnts-895335:${more_fun_tnts_curse_file}",
+                modId          : 'moretnt',
+                metadataVersion: more_fun_tnts_version
+        ],
+        simulated        : [
+                notation       : "dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}",
+                modId          : 'simulated',
+                metadataVersion: create_aeronautics_version
+        ],
+        aeronautics      : [
+                notation       : "dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}",
+                modId          : 'aeronautics',
+                metadataVersion: create_aeronautics_version
+        ],
+        offroad          : [
+                notation       : "dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}",
+                modId          : 'offroad',
+                metadataVersion: create_aeronautics_version
+        ]
+]
+
 def integrations = [
         draconic      : [
-                modVersions: [draconicevolution: draconic_evolution_version],
-                dependencies: [
-                        "maven.modrinth:codechicken-lib:${codechicken_lib_version}",
-                        "maven.modrinth:brandons-core:${brandons_core_version}",
-                        "maven.modrinth:draconic-evolution:${draconic_evolution_version}"
-                ],
+                dependencyKeys: ['codechickenlib', 'brandonscore', 'draconic'],
                 mixinConfig: "${mod_id}.draconic.mixins.json"
         ],
         mekanism      : [
-                modVersions: [mekanism: mekanism_metadata_version],
-                dependencies: [
-                        "maven.modrinth:mekanism:${mekanism_version}"
-                ],
+                dependencyKeys: ['mekanism'],
                 mixinConfig: "${mod_id}.mekanism.mixins.json"
         ],
         ballistix     : [
-                modVersions: [
-                        voltaic       : voltaic_version,
-                        electrodynamics: electrodynamics_version,
-                        nuclearscience : nuclear_science_version,
-                        ballistix      : ballistix_version
-                ],
-                dependencies: [
-                        "curse.maven:voltaic-1237904:${voltaic_curse_file}",
-                        "curse.maven:electrodynamics-316867:${electrodynamics_curse_file}",
-                        "curse.maven:nuclear-science-318646:${nuclear_science_curse_file}",
-                        "curse.maven:ballistix-443915:${ballistix_curse_file}"
-                ],
+                dependencyKeys: ['voltaic', 'ballistix'],
                 mixinConfig: "${mod_id}.ballistix.mixins.json"
         ],
+        nuclearscience: [
+                dependencyKeys: ['voltaic', 'electrodynamics', 'nuclearscience'],
+                mixinConfig: "${mod_id}.nuclearscience.mixins.json"
+        ],
         pneumaticcraft: [
-                modVersions: [pneumaticcraft: pneumaticcraft_version],
-                dependencies: [
-                        "curse.maven:pneumaticcraft-repressurized-281849:${pneumaticcraft_curse_file}"
-                ],
+                dependencyKeys: ['pneumaticcraft'],
                 mixinConfig: "${mod_id}.pneumaticcraft.mixins.json"
         ],
         moretnt       : [
-                modVersions: [moretnt: more_fun_tnts_version],
-                dependencies: [
-                        "curse.maven:more-fun-tnts-895335:${more_fun_tnts_curse_file}"
-                ],
+                dependencyKeys: ['moretnt'],
                 mixinConfig: "${mod_id}.moretnt.mixins.json"
         ]
 ]
 
-def aviationRuntimes = [
-        simulated  : "dev.simulated_team.simulated:simulated-neoforge-${minecraft_version}:${create_aeronautics_version}",
-        aeronautics: "dev.eriksonn.aeronautics:aeronautics-neoforge-${minecraft_version}:${create_aeronautics_version}",
-        offroad    : "dev.ryanhcode.offroad:offroad-neoforge-${minecraft_version}:${create_aeronautics_version}"
-]
+def aviationRuntimes = ['simulated', 'aeronautics', 'offroad'] as Set
 
-def supportedCompatRuntimes = (integrations.keySet() + aviationRuntimes.keySet()) as Set
+def supportedCompatRuntimes = (integrations.keySet() + aviationRuntimes) as Set
 def compatRuntimeSelection = providers.gradleProperty('compat_runtime').getOrElse('full')
 def enabledCompatRuntimes
 if (compatRuntimeSelection == 'full') {
@@ -88,6 +123,16 @@ if (compatRuntimeSelection == 'full') {
         throw new GradleException("Unsupported compat_runtime entries: ${unsupportedCompatRuntimes.sort()}")
     }
 }
+
+def compatExclusions = providers.gradleProperty('compat_exclude').getOrElse('')
+        .split(',')
+        .collect { it.trim() }
+        .findAll { !it.isEmpty() } as Set
+def unsupportedCompatExclusions = compatExclusions - supportedCompatRuntimes
+if (!unsupportedCompatExclusions.isEmpty()) {
+    throw new GradleException("Unsupported compat_exclude entries: ${unsupportedCompatExclusions.sort()}")
+}
+enabledCompatRuntimes = enabledCompatRuntimes - compatExclusions
 
 def generatedGameTestResources = layout.buildDirectory.dir('generated/gameTestResources')
 def generateGameTestStructures = tasks.register('generateGameTestStructures') {
@@ -244,7 +289,7 @@ integrations.each { name, ignored ->
     }
 }
 
-aviationRuntimes.each { name, ignored ->
+aviationRuntimes.each { name ->
     def optionalRuntime = configurations.create("${name}LocalRuntime") {
         canBeConsumed = false
         canBeResolved = false
@@ -293,13 +338,13 @@ dependencies {
 
     localImplementation("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}")
 
-    aviationRuntimes.each { name, notation ->
-        add("${name}LocalRuntime", notation) { transitive = false }
+    aviationRuntimes.each { name ->
+        add("${name}LocalRuntime", optionalDependencyCatalog[name].notation) { transitive = false }
     }
 
     integrations.each { name, integration ->
-        integration.dependencies.each { notation ->
-            add("${name}LocalImplementation", notation)
+        integration.dependencyKeys.each { dependencyKey ->
+            add("${name}LocalImplementation", optionalDependencyCatalog[dependencyKey].notation)
         }
     }
 
@@ -311,25 +356,15 @@ dependencies {
 def integrationMixinBlocks = integrations.values()
         .collect { integration -> "[[mixins]]\nconfig=\"${integration.mixinConfig}\"" }
         .join('\n\n')
-def optionalCoreModVersions = [
-        simulated  : create_aeronautics_version,
-        aeronautics: create_aeronautics_version,
-        offroad    : create_aeronautics_version
-]
-def optionalDependencyBlocks = (optionalCoreModVersions.entrySet().collect { entry ->
-    [modId: entry.key, version: entry.value]
-} + integrations.values()
-        .collectMany { integration ->
-            integration.modVersions.collect { dependencyModId, dependencyVersion ->
-                [modId: dependencyModId, version: dependencyVersion]
-            }
-        })
+def optionalDependencyBlocks = optionalDependencyCatalog.values()
+        .findAll { dependency -> dependency.modId && dependency.metadataVersion }
+        .unique { dependency -> dependency.modId }
         .collect { dependency ->
             [
                     "[[dependencies.\"${mod_id}\"]]",
                     "    modId=\"${dependency.modId}\"",
                     '    type="optional"',
-                    "    versionRange=\"[${dependency.version},)\"",
+                    "    versionRange=\"[${dependency.metadataVersion},)\"",
                     '    ordering="AFTER"',
                     '    side="BOTH"'
             ].join('\n')

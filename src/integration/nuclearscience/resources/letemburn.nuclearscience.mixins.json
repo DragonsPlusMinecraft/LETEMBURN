@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "dev.marblegate.letemburn.mixin.nuclearscience",
+  "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}

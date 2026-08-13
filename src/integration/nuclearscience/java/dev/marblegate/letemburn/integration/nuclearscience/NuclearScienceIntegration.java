@@ -16,29 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package dev.marblegate.letemburn.integration;
+package dev.marblegate.letemburn.integration.nuclearscience;
 
-import net.neoforged.fml.ModList;
+import dev.marblegate.letemburn.LetEmBurn;
+import dev.marblegate.letemburn.integration.ModIntegration;
+import net.neoforged.fml.common.Mod;
 
-public enum ModIntegration {
-    DRACONIC_EVOLUTION("draconicevolution"),
-    MEKANISM("mekanism"),
-    BALLISTIX("ballistix"),
-    NUCLEAR_SCIENCE("nuclearscience"),
-    PNEUMATICCRAFT("pneumaticcraft"),
-    MORE_TNT("moretnt");
-
-    private final String modId;
-
-    ModIntegration(String modId) {
-        this.modId = modId;
-    }
-
-    public String modId() {
-        return modId;
-    }
-
-    public boolean loaded() {
-        return ModList.get().isLoaded(modId);
+@Mod(LetEmBurn.MOD_ID)
+public final class NuclearScienceIntegration {
+    public NuclearScienceIntegration() {
+        if (!ModIntegration.NUCLEAR_SCIENCE.loaded()) {
+            return;
+        }
+        LetEmBurn.LOGGER.info("Initialized optional compatibility for {}", ModIntegration.NUCLEAR_SCIENCE.modId());
     }
 }

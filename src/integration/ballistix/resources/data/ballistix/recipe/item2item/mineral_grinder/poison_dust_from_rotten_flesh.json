@@ -1,0 +1,25 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "electrodynamics"
+    }
+  ],
+  "type": "electrodynamics:mineral_grinder_recipe",
+  "experience": 0.10000000149011612,
+  "group": "ballistix",
+  "iteminputs": [
+    {
+      "count": 1,
+      "ingredient": {
+        "item": "minecraft:rotten_flesh"
+      }
+    }
+  ],
+  "output": {
+    "count": 2,
+    "id": "ballistix:dustpoison"
+  },
+  "ticks": 200,
+  "usagepertick": 350.0
+}
