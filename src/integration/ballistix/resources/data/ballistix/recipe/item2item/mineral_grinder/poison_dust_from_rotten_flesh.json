@@ -3,6 +3,10 @@
     {
       "type": "neoforge:mod_loaded",
       "modid": "electrodynamics"
+    },
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "ballistix"
     }
   ],
   "type": "electrodynamics:mineral_grinder_recipe",
