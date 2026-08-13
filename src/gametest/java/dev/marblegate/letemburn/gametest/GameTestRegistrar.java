@@ -49,6 +49,9 @@ public final class GameTestRegistrar {
         if (ModList.get().isLoaded("ballistix") && ModList.get().isLoaded("nuclearscience")) {
             event.register(BallistixNuclearScienceGameTests.class);
         }
+        if (ModList.get().isLoaded("nuclearscience")) {
+            event.register(NuclearScienceFissionGameTests.class);
+        }
         if (ModList.get().isLoaded("pneumaticcraft")) {
             event.register(PneumaticCraftGameTests.class);
         }

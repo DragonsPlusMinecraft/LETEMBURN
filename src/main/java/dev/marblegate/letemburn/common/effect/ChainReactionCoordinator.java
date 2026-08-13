@@ -54,8 +54,13 @@ public final class ChainReactionCoordinator {
             TransactionalEffect effect,
             Runnable rollback) {
         EffectKey key = context.key(payloadFingerprint);
-        DeferredEffectQueue<EffectKey> queue = queues.computeIfAbsent(context.level(), ignored -> new DeferredEffectQueue<>());
-        return queue.reserve(context.level().getGameTime(), key, effect, rollback)
+        return reserve(context.level(), key, effect, rollback);
+    }
+
+    public ImpactStatus reserve(
+            ServerLevel level, EffectKey key, TransactionalEffect effect, Runnable rollback) {
+        DeferredEffectQueue<EffectKey> queue = queues.computeIfAbsent(level, ignored -> new DeferredEffectQueue<>());
+        return queue.reserve(key.gameTime(), key, effect, rollback)
                 ? ImpactStatus.QUEUED
                 : ImpactStatus.CONSUMED;
     }

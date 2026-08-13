@@ -3,7 +3,9 @@
   "package": "dev.marblegate.letemburn.mixin.nuclearscience",
   "plugin": "dev.marblegate.letemburn.mixin.MixinConfigPlugin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "TileFissionReactorCoreMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },
