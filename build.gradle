@@ -3,6 +3,7 @@ plugins {
     id 'idea'
     id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.143'
+    id 'me.modmuss50.mod-publish-plugin' version '2.0.0-beta.2'
     id 'com.diffplug.spotless' version '8.9.0'
 }
 
@@ -444,6 +445,54 @@ spotless {
 
 tasks.named('check').configure {
     dependsOn tasks.named('spotlessCheck')
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId = "${mod_artifact_id}-${minecraft_version}"
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'DragonsPlus'
+            url = uri('https://maven.dragons.plus/releases')
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+}
+
+publishMods {
+    file = jar.archiveFile
+    additionalFiles.from sourcesJar.archiveFile
+    changelog = project.file('CHANGELOG.md').text
+    version = mod_version
+    type = STABLE
+    displayName = "${mod_name} ${mod_version} for Create ${minecraft_version}-${create_version_production}"
+    modLoaders.add('neoforge')
+
+    curseforge {
+        projectId = '1650257'
+        accessToken = providers.environmentVariable('CURSEFORGE_TOKEN')
+        minecraftVersions.add(minecraft_version)
+        requires('create')
+        requires('sable')
+        client = true
+        server = true
+    }
+
+    modrinth {
+        projectId = 'daRAzYaH'
+        accessToken = providers.environmentVariable('MODRINTH_TOKEN')
+        minecraftVersions.add(minecraft_version)
+        requires('create')
+        requires('sable')
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
