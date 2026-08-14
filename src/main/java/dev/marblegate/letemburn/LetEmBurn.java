@@ -20,9 +20,7 @@ package dev.marblegate.letemburn;
 
 import com.mojang.logging.LogUtils;
 import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
-import dev.marblegate.letemburn.common.impact.ImpactPayloadRegistry;
 import dev.marblegate.letemburn.config.LetEmBurnConfig;
-import dev.marblegate.letemburn.integration.vanilla.VanillaTntImpactAdapter;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -36,7 +34,6 @@ public final class LetEmBurn {
 
     public LetEmBurn(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, LetEmBurnConfig.SPEC);
-        ImpactPayloadRegistry.INSTANCE.register(VanillaTntImpactAdapter.INSTANCE);
         ChainReactionCoordinator.INSTANCE.register();
     }
 }

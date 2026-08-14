@@ -13,9 +13,6 @@ displayURL="${mod_github}"
 authors="${mod_authors}"
 description='''${mod_description}'''
 
-[[mixins]]
-config="${mod_id}.mixins.json"
-
 ${integration_mixin_blocks}
 
 [[dependencies."${mod_id}"]]

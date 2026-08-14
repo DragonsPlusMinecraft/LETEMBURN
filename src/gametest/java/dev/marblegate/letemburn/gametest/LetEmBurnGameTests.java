@@ -24,15 +24,19 @@ import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.localPositio
 import static dev.ryanhcode.sable.neoforge.gametest.SableTestHelper.spawnSingleBlockSubLevel;
 
 import dev.marblegate.letemburn.LetEmBurn;
-import dev.marblegate.letemburn.common.effect.ChainReactionCoordinator;
 import dev.marblegate.letemburn.config.LetEmBurnConfig;
-import dev.marblegate.letemburn.gametest.audit.VanillaTntImpactAudit;
+import dev.ryanhcode.sable.api.block.BlockWithSubLevelCollisionCallback;
 import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.physics.callback.ExplosiveBlockCallback;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -58,18 +62,19 @@ public final class LetEmBurnGameTests {
     }
 
     @GameTest(template = "bootstrap", timeoutTicks = 140)
-    public static void directVanillaTntUsesDeferredNativeEntity(GameTestHelper helper) {
+    public static void directVanillaTntUsesSableNativeCallback(GameTestHelper helper) {
+        requireSableTntCallback(helper);
         ServerSubLevelContainer container = requireContainer(helper);
         SubLevelPhysicsSystem physicsSystem = requirePhysics(container);
         addWall(helper, 3);
-        VanillaTntImpactAudit.clearWithin(helper.getBounds());
 
         ServerSubLevel subLevel = spawnSingleBlockSubLevel(
                 container,
                 absolutePosition(helper, new Vector3d(2.5D, 4.0D, 1.5D)),
                 Blocks.TNT.defaultBlockState());
         RigidBodyHandle handle = physicsSystem.getPhysicsHandle(subLevel);
-        AtomicBoolean observedNativeTnt = new AtomicBoolean();
+        Set<UUID> observedNativeTnt = new HashSet<>();
+        AtomicInteger highestObservedFuse = new AtomicInteger(-1);
         launch(helper, handle, new Vector3d(0.0D, 100.0D, 20.0D));
 
         helper.startSequence()
@@ -78,31 +83,27 @@ public final class LetEmBurnGameTests {
                             .getEntitiesOfClass(PrimedTnt.class, helper.getBounds())
                             .forEach(tnt -> {
                                 if (tnt.getFuse() <= 4 && tnt.getBlockState().is(Blocks.TNT)) {
-                                    observedNativeTnt.set(true);
+                                    observedNativeTnt.add(tnt.getUUID());
+                                    highestObservedFuse.accumulateAndGet(tnt.getFuse(), Math::max);
                                 }
                             });
                 })
                 .thenExecute(() -> {
-                    var spawnEvents = VanillaTntImpactAudit.spawnEventsWithin(helper.getBounds());
-                    if (spawnEvents.size() != 1
-                            || spawnEvents.getFirst().initialFuse() != 4
-                            || spawnEvents.getFirst().envelopeDepth() != 0
-                            || !observedNativeTnt.get()) {
+                    if (observedNativeTnt.size() != 1
+                            || highestObservedFuse.get() < 0
+                            || highestObservedFuse.get() > 4) {
                         Vector3d local = localPosition(helper, subLevel.logicalPose().position());
-                        helper.fail(("A direct projected TNT payload did not create exactly one native "
-                                + "PrimedTnt with an initial 4 tick fuse; events=%s, "
-                                + "observed=%s, body=%s, velocity=%s, mass=%s, payload=%s, "
-                                + "lastSpawn=%s, pending=%d")
+                        helper.fail(("Sable's native TNT callback did not create exactly one "
+                                + "PrimedTnt with a fuse no greater than 4; observed=%s, "
+                                + "highestFuse=%s, body=%s, velocity=%s, mass=%s, payload=%s")
                                         .formatted(
-                                                spawnEvents,
-                                                observedNativeTnt.get(),
+                                                observedNativeTnt,
+                                                highestObservedFuse,
                                                 local,
                                                 velocityOrRemoved(handle),
                                                 subLevel.getMassTracker().getMass(),
                                                 subLevel.getLevel()
-                                                        .getBlockState(subLevel.getPlot().getCenterBlock()),
-                                                VanillaTntImpactAudit.lastSpawnPosition(),
-                                                ChainReactionCoordinator.INSTANCE.pendingCount(helper.getLevel())));
+                                                        .getBlockState(subLevel.getPlot().getCenterBlock())));
                     }
                 })
                 .thenSucceed();
@@ -110,10 +111,10 @@ public final class LetEmBurnGameTests {
 
     @GameTest(template = "bootstrap", timeoutTicks = 100)
     public static void directVanillaTntSurvivesBelowThresholdCollision(GameTestHelper helper) {
+        requireSableTntCallback(helper);
         ServerSubLevelContainer container = requireContainer(helper);
         SubLevelPhysicsSystem physicsSystem = requirePhysics(container);
         addWall(helper, 3);
-        VanillaTntImpactAudit.clearWithin(helper.getBounds());
 
         ServerSubLevel subLevel = spawnSingleBlockSubLevel(
                 container,
@@ -121,6 +122,7 @@ public final class LetEmBurnGameTests {
                 Blocks.TNT.defaultBlockState());
         RigidBodyHandle handle = physicsSystem.getPhysicsHandle(subLevel);
         BlockPos payloadPosition = subLevel.getPlot().getCenterBlock();
+        AtomicBoolean observedNativeTnt = new AtomicBoolean();
 
         helper.startSequence()
                 .thenIdle(2)
@@ -128,20 +130,29 @@ public final class LetEmBurnGameTests {
                         handle,
                         subLevel,
                         absoluteDirection(helper, new Vector3d(0.0D, 0.0D, 3.0D))))
-                .thenIdle(12)
+                .thenExecuteFor(12, () -> {
+                    if (!helper.getLevel()
+                            .getEntitiesOfClass(PrimedTnt.class, helper.getBounds())
+                            .isEmpty()) {
+                        observedNativeTnt.set(true);
+                    }
+                })
                 .thenExecute(() -> {
-                    var belowThreshold = VanillaTntImpactAudit.belowThresholdEventsWithin(helper.getBounds());
-                    if (belowThreshold.isEmpty()
-                            || belowThreshold.stream().anyMatch(event -> event.envelopeDepth() != 0)
-                            || VanillaTntImpactAudit.spawnsWithin(helper.getBounds()) != 0) {
-                        helper.fail("Direct TNT did not record only below-threshold collisions: "
-                                + belowThreshold);
+                    if (observedNativeTnt.get()) {
+                        helper.fail("Sable primed direct TNT below its native impact threshold");
                     }
                     if (!subLevel.getLevel().getBlockState(payloadPosition).is(Blocks.TNT)) {
-                        helper.fail("Below-threshold direct TNT collision consumed the payload");
+                        helper.fail("Sable consumed direct TNT below its native impact threshold");
                     }
                 })
                 .thenSucceed();
+    }
+
+    private static void requireSableTntCallback(GameTestHelper helper) {
+        if (!(Blocks.TNT instanceof BlockWithSubLevelCollisionCallback callbackBlock)
+                || callbackBlock.sable$getCallback() != ExplosiveBlockCallback.INSTANCE) {
+            helper.fail("Vanilla TNT is not using Sable's native ExplosiveBlockCallback");
+        }
     }
 
     static ServerSubLevelContainer requireContainer(GameTestHelper helper) {

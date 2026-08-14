@@ -16,8 +16,7 @@
     "NuclearPlasmaProjectionAuditMixin",
     "NuclearPlasmaSteamAuditMixin",
     "ProcessExplosionDamageOracleMixin",
-    "ProcessExplosionOracleMixin",
-    "VanillaTntImpactAuditMixin"
+    "ProcessExplosionOracleMixin"
   ],
   "injectors": {
     "defaultRequire": 1
